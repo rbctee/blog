@@ -1,31 +1,52 @@
 AUTHOR = 'rbct'
 SITENAME = 'Blog'
 SITEURL = ''
-
 PATH = 'content'
-
 TIMEZONE = 'Europe/Rome'
-
 DEFAULT_LANG = 'en'
 
+# Blogroll
+LINKS = ()
+
+# Social widget
+SOCIAL = (
+    ('linkedin', 'https://www.linkedin.com/in/rbct/'),
+    ('github', 'https://github.com/rbctee'),
+)
+GITHUB_URL = 'http://github.com/rbctee/'
+STATIC_PATHS = [
+    'images',
+    'extra',  # this
+]
+EXTRA_PATH_METADATA = {
+    'extra/custom.css': {'path': 'custom.css'},
+    'extra/robots.txt': {'path': 'robots.txt'},
+    'extra/favicon.ico': {'path': 'favicon.ico'},  # and this
+    'extra/CNAME': {'path': 'CNAME'},
+    'extra/LICENSE': {'path': 'LICENSE'},
+    'extra/README': {'path': 'README'},
+}
+
+DEFAULT_PAGINATION = 10
+
+# Uncomment following line if you want document-relative URLs when developing
+# RELATIVE_URLS = True
+
+# conf. specific for pelican-hyde theme
+COLOR_THEME = "0"
+BIO = """Hi, I'm Robert Raducioiu. Currently working as a Cyber Security Consultant
+in Italy, I'm interested in low-level hacking, motorcycles, and outdoor fun.
+"""
+PROFILE_IMAGE = "avatar.png"
+
+# theme options
+THEME = 'themes/'
+
+
 # Feed generation is usually not desired when developing
+# taken from https://jackdewinter.github.io/2019/10/23/fine-tuning-pelican-producing-rss-feeds/
 FEED_ALL_ATOM = None
 CATEGORY_FEED_ATOM = None
 TRANSLATION_FEED_ATOM = None
 AUTHOR_FEED_ATOM = None
 AUTHOR_FEED_RSS = None
-
-# Blogroll
-LINKS = (('Pelican', 'https://getpelican.com/'),
-         ('Python.org', 'https://www.python.org/'),
-         ('Jinja2', 'https://palletsprojects.com/p/jinja/'),
-         ('You can modify those links in your config file', '#'),)
-
-# Social widget
-SOCIAL = (('You can add links in your config file', '#'),
-          ('Another social link', '#'),)
-
-DEFAULT_PAGINATION = 10
-
-# Uncomment following line if you want document-relative URLs when developing
-#RELATIVE_URLS = True
