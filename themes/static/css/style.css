@@ -1,0 +1,35 @@
+/* Style for the container of all posts */
+.posts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+/* Style for each individual post */
+.post {
+    width: calc(33.33% - 10px); /* Adjust the width as needed */
+    margin: 0 5px 20px;
+    background: #f9f9f9;
+    padding: 10px;
+    /* border: 1px solid #ddd; */
+    box-sizing: border-box;
+}
+
+/* Style for the big post (latest blog post) */
+.big-post {
+    width: 100%; /* Full width for the latest post */
+    background: url('your-big-image.jpg') top center no-repeat;
+    background-size: cover;
+    padding: 20px;
+}
+
+/* Style for the pagination buttons */
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pagination-item {
+    margin: 0 10px;
+}
