@@ -42,10 +42,14 @@ PROFILE_IMAGE = "avatar.png"
 # theme options
 THEME = 'themes/'
 
+# Feeds configuration
+FEED_DOMAIN = SITEURL
 # Feed generation is usually not desired when developing
 # taken from https://jackdewinter.github.io/2019/10/23/fine-tuning-pelican-producing-rss-feeds/
-FEED_ALL_ATOM = None
-CATEGORY_FEED_ATOM = None
+FEED_MAX_ITEMS = 15
+FEED_ALL_ATOM = 'feeds/all.atom.xml'
+FEED_ALL_RSS = 'feeds/all.rss.xml'
+CATEGORY_FEED_ATOM = 'feeds/{slug}.atom.xml'
 TRANSLATION_FEED_ATOM = None
-AUTHOR_FEED_ATOM = None
-AUTHOR_FEED_RSS = None
+AUTHOR_FEED_ATOM = 'feeds/{slug}.atom.xml'
+AUTHOR_FEED_RSS = 'feeds/{slug}.rss.xml'
