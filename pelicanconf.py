@@ -42,7 +42,6 @@ PROFILE_IMAGE = "avatar.png"
 # theme options
 THEME = 'themes/'
 
-
 # Feed generation is usually not desired when developing
 # taken from https://jackdewinter.github.io/2019/10/23/fine-tuning-pelican-producing-rss-feeds/
 FEED_ALL_ATOM = None

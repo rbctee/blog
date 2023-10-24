@@ -3,6 +3,7 @@ Date: 2022-06-08T19:18:32.000Z
 ImageURL: https://images.unsplash.com/photo-1589652717521-10c0d092dea9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxMTc3M3wwfDF8c2VhcmNofDExfHxjb21wdXRlciUyMHZpcnVzfGVufDB8fHx8MTY1NDcxNjA0MA&ixlib=rb-1.2.1&q=80&w=2000
 Synopsis: As the name implies, Classic DLL Injection is one of the simpliest techniques that one can use for injecting malicious code into remote processes. Due to the way it works, you can't inject into processes with a different bitness, however in this post I'll explain how to adapt it, using some tweaks, to make it work all the time!
 
+
 Recently I found myself interested in learning more and more about Process Injection, mainly due to high number of techniques you can use to achieve the same goal: remote code execution in other processes.
 
 There are many useful resources publicly available on the Internet regarding this topic, such as:
@@ -15,7 +16,6 @@ One of the most basic methods to perform Process Injection, and the one I'm goin
 As regards its author, I've tried tracking them down based on the information available on the Internet, however I couldn't find a decisive answer.
 
 As the name implies, the technique is based on the injection of a *Dynamic Link Library* (DLL) within the memory of a remote process. Below is a diagram that sums up the steps you have to follow to perform it.
-
 
 At a high level, it is based on the creation of a thread inside a victim process that loads an arbitrary DLL library.
 
@@ -136,7 +136,6 @@ The steps are more of less the following:
 5. access the Export Address Table through the fields `AddressOfFunctions`, `AddressOfNames`, `AddressOfNameOrdinals`
 
 The following figures shows how to get to the Export Address Table starting from the structure `_IMAGE_DOS_HEADER`, which can be found at the very beginning of the DLL file.
-
 
 Note that structures such as `_IMAGE_DOS_HEADER` remain the same regardless of the bitness of the DLL, so you can for example access the field `e_lfanew` adding **0x3c** to the base address of the loaded library.
 

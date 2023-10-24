@@ -13,7 +13,6 @@
  * https://github.com/poole/poole.
  */
 
-
 /*
  * Contents
  *
@@ -27,7 +26,6 @@
  * Reverse layout
  * Themes
  */
-
 
 /*
  * Body resets
@@ -112,7 +110,6 @@ p {
 strong {
   color: #303030;
 }
-
 
 /* Lists */
 ul, ol, dl {
@@ -251,7 +248,6 @@ tbody tr:nth-child(odd) th {
   background-color: #f9f9f9;
 }
 
-
 /*
  * Custom type
  *
@@ -262,7 +258,6 @@ tbody tr:nth-child(odd) th {
   font-size: 1.25rem;
   font-weight: 300;
 }
-
 
 /*
  * Messages
@@ -278,7 +273,6 @@ tbody tr:nth-child(odd) th {
   background-color: #f9f9f9;
 }
 
-
 /*
  * Container
  *
@@ -292,7 +286,6 @@ tbody tr:nth-child(odd) th {
   margin-left:  auto;
   margin-right: auto;
 }
-
 
 /*
  * Masthead
@@ -319,7 +312,6 @@ tbody tr:nth-child(odd) th {
   color: #c0c0c0;
   letter-spacing: 0;
 }
-
 
 /*
  * Posts and pages

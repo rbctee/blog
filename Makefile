@@ -8,7 +8,6 @@ OUTPUTDIR=$(BASEDIR)/output
 CONFFILE=$(BASEDIR)/pelicanconf.py
 PUBLISHCONF=$(BASEDIR)/publishconf.py
 
-
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
 	PELICANOPTS += -D
@@ -25,7 +24,6 @@ PORT ?= 0
 ifneq ($(PORT), 0)
 	PELICANOPTS += -p $(PORT)
 endif
-
 
 help:
 	@echo 'Makefile for a pelican Web site                                           '
@@ -67,6 +65,5 @@ devserver-global:
 
 publish:
 	"$(PELICAN)" "$(INPUTDIR)" -o "$(OUTPUTDIR)" -s "$(PUBLISHCONF)" $(PELICANOPTS)
-
 
 .PHONY: html help clean regenerate serve serve-global devserver publish 

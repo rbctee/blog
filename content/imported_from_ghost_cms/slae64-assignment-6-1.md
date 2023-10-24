@@ -1,7 +1,41 @@
 Title: SLAE64 - Assignment 6.1
 Date: 2022-07-01T19:45:25.000Z
 
-<h2 id="disclaimer">Disclaimer</h2><p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:</p><p><a href="https://www.pentesteracademy.com/course?id=7">https://www.pentesteracademy.com/course?id=7</a></p><p>Student ID: PA-30398</p><h2 id="foreword">Foreword</h2><p>I chose the following shellcode samples:</p><ol><li><a href="https://shell-storm.org/shellcode/files/shellcode-878.php">Read /etc/passwd - 82 bytes</a></li><li><a href="https://shell-storm.org/shellcode/files/shellcode-896.php">Add map in /etc/hosts file - 110 bytes</a></li><li><a href="https://shell-storm.org/shellcode/files/shellcode-867.php">Reads data from /etc/passwd to /tmp/outfile - 118 bytes</a></li></ol><p>In this part I'll create a polymorphic version of the first shellcode.</p><h2 id="source-code">Source Code</h2><p>The files for this part of the assignment are the following:</p><ul><li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae64/assignment/6/1/original.nasm">original.asm</a>, which contains the original shellcode</li><li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae64/assignment/6/1/polymorphic.nasm">polymorphic.nasm</a>, containing the polymorphic version of the shellcode</li></ul><h2 id="analysis">Analysis</h2><p>As mentioned previously, the first shellcode consists of reading the file <code>/etc/passwd</code>. At 82 bytes, it is a simple shellcode, around the length of a simple reverse shell.</p><p>Below is a snippet of code containing the assembly instructions along with some comments describing the logic in broad terms.</p><figure class="kg-card kg-code-card"><pre><code class="language-nasm">; JMP-CALL-POP technique to retrieve the address of
+
+## Disclaimer
+
+
+This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:
+
+[https://www.pentesteracademy.com/course?id=7](https://www.pentesteracademy.com/course?id=7)
+
+Student ID: PA-30398
+
+## Foreword
+
+I chose the following shellcode samples:
+
+<ol><li>[Read /etc/passwd - 82 bytes](https://shell-storm.org/shellcode/files/shellcode-878.php)
+- [Add map in /etc/hosts file - 110 bytes](https://shell-storm.org/shellcode/files/shellcode-896.php)
+- [Reads data from /etc/passwd to /tmp/outfile - 118 bytes](https://shell-storm.org/shellcode/files/shellcode-867.php)
+
+In this part I'll create a polymorphic version of the first shellcode.
+
+## Source Code
+
+The files for this part of the assignment are the following:
+
+- [original.asm](https://github.com/rbctee/SlaeExam/blob/main/slae64/assignment/6/1/original.nasm), which contains the original shellcode
+- [polymorphic.nasm](https://github.com/rbctee/SlaeExam/blob/main/slae64/assignment/6/1/polymorphic.nasm), containing the polymorphic version of the shellcode
+
+## Analysis
+
+As mentioned previously, the first shellcode consists of reading the file `/etc/passwd`. At 82 bytes, it is a simple shellcode, around the length of a simple reverse shell.
+
+Below is a snippet of code containing the assembly instructions along with some comments describing the logic in broad terms.
+
+```nasm
+; JMP-CALL-POP technique to retrieve the address of
 ; "/etc/passwd", stored into RDI
 ; 1st argument of open: pointer to the file to open
 0x00000000      eb3f           jmp 0x41
@@ -67,7 +101,34 @@ Date: 2022-07-01T19:45:25.000Z
 0x0000004b      7061           jo 0xae
 0x0000004d      7373           jae 0xc2
 0x0000004f      7764           ja 0xb5
-0x00000051      41             invalid</code></pre><figcaption>First analysis of the shellcode</figcaption></figure><p>Overall, the shellcode can be divided in these steps:</p><ol><li>using the <code>JMP-CALL-POP</code> technique to obtain the address of the string <code>/etc/passwd</code></li><li>invoking the syscall <code>open</code> to open the previous file in read mode</li><li>invoking the syscall <code>read</code> to read 4095 bytes, and saving them on the stack</li><li>invoking the syscall <code>write</code> to write them to the <em>standard output</em></li><li>invoking the syscall <code>exit</code> to terminate the execution of the shellcode</li></ol><h2 id="polymorphism">Polymorphism</h2><p>For simplicity I chose to divide the shellcode into the following assembly routines:</p><ul><li><em>OpenFile</em></li><li><em>ReadFile</em></li><li><em>WriteOutput</em></li><li><em>Exit</em></li></ul><h3 id="openfile">OpenFile</h3><p>The first routine simply opens the file <code>/etc/passwd</code>.</p><figure class="kg-card kg-code-card"><pre><code class="language-nasm">global _start
+0x00000051      41             invalid
+```
+
+<figcaption class="figure-caption">First analysis of the shellcode</figcaption>
+
+Overall, the shellcode can be divided in these steps:
+
+<ol><li>using the `JMP-CALL-POP` technique to obtain the address of the string `/etc/passwd`
+- invoking the syscall `open` to open the previous file in read mode
+- invoking the syscall `read` to read 4095 bytes, and saving them on the stack
+- invoking the syscall `write` to write them to the `standard output`
+- invoking the syscall `exit` to terminate the execution of the shellcode
+
+## Polymorphism
+
+For simplicity I chose to divide the shellcode into the following assembly routines:
+
+- `OpenFile`
+- `ReadFile`
+- `WriteOutput`
+- `Exit`
+
+### OpenFile
+
+The first routine simply opens the file `/etc/passwd`.
+
+```nasm
+global _start
 
 section .text
 
@@ -91,7 +152,25 @@ OpenFile:
     add al, 2
 
     xor esi, esi
-    syscall</code></pre><figcaption>Opening <code>/etc/passwd</code></figcaption></figure><p>Instead of the <code>JMP-CALL-POP</code> technique, I decided to push the string to the stack and retrieve its address through the <code>RSP</code> register.</p><p>This allowed me to decrease the number of bytes used by the shellcode, making it smaller.</p><p>Moreover, thanks to the decrement in size, I could use some of the spare bytes to obfuscate part of the strings, e.g. <code>/etc/passwd</code>.</p><p>In this case, the only clear-text part is the substring <code>sswd</code>. If you can afford some other bytes, you could probably obfuscate that one too.</p><h3 id="readfile">ReadFile</h3><p>Since the routing for reading the bytes from <code>/etc/passwd</code> is quite short, I simply changed some of the instructions (to alter the resulting bytes) and their order.</p><figure class="kg-card kg-code-card"><pre><code class="language-nasm">ReadFile:
+    syscall
+```
+
+<figcaption class="figure-caption">Opening `/etc/passwd`</figcaption>
+
+Instead of the `JMP-CALL-POP` technique, I decided to push the string to the stack and retrieve its address through the `RSP` register.
+
+This allowed me to decrease the number of bytes used by the shellcode, making it smaller.
+
+Moreover, thanks to the decrement in size, I could use some of the spare bytes to obfuscate part of the strings, e.g. `/etc/passwd`.
+
+In this case, the only clear-text part is the substring `sswd`. If you can afford some other bytes, you could probably obfuscate that one too.
+
+### ReadFile
+
+Since the routing for reading the bytes from `/etc/passwd` is quite short, I simply changed some of the instructions (to alter the resulting bytes) and their order.
+
+```nasm
+ReadFile:
 
     sub sp, 0xfff
     mov rsi, rsp
@@ -104,17 +183,49 @@ OpenFile:
     cdq
     mov dx, 0xfff
 
-    syscall</code></pre><figcaption>Reading <code>/etc/passwd</code></figcaption></figure><p>In this case, I replaced the <code>LEA</code> (Load Effective Address) instruction with <code>MOV</code>, and replaced the next <code>MOV</code> with the <code>PUSH-POP</code> technique, which should occupy fewer bytes depending on the register used.</p><p>There's also the instruction <code>CDQ</code> (Convert Double to Quad), which allows me sign-extend <code>RAX</code> into <code>RDX</code>, thus clearing the latter if the former is positive.</p><h3 id="writeoutput">WriteOutput</h3><p>In the original shellcode, the part of the code responsible for writing the contents of <code>/etc/passwd</code> to the standard output can be shrinked to its half.</p><p>In fact, it clears the <code>RDI</code> register and increases it by 1, while doing the same operations for the <code>RAX</code> register, when you could simply copy <code>RDI</code> into <code>RAX</code>.</p><figure class="kg-card kg-code-card"><pre><code class="language-nasm">WriteOutput:
+    syscall
+```
+
+<figcaption class="figure-caption">Reading `/etc/passwd`</figcaption>
+
+In this case, I replaced the `LEA` (Load Effective Address) instruction with `MOV`, and replaced the next `MOV` with the `PUSH-POP` technique, which should occupy fewer bytes depending on the register used.
+
+There's also the instruction `CDQ` (Convert Double to Quad), which allows me sign-extend `RAX` into `RDX`, thus clearing the latter if the former is positive.
+
+### WriteOutput
+
+In the original shellcode, the part of the code responsible for writing the contents of `/etc/passwd` to the standard output can be shrinked to its half.
+
+In fact, it clears the `RDI` register and increases it by 1, while doing the same operations for the `RAX` register, when you could simply copy `RDI` into `RAX`.
+
+```nasm
+WriteOutput:
   
     ; call sys_write
     xor edi, edi
     inc edi
     mov rax, rdi
 
-    syscall</code></pre><figcaption>Writing the contents of <code>/etc/passwd</code> to <code>stdout</code></figcaption></figure><h3 id="exit">Exit</h3><p>The last routine terminates the execution of the shellcode, exiting gracefully.</p><figure class="kg-card kg-code-card"><pre><code class="language-nasm">Exit:
+    syscall
+```
+
+<figcaption class="figure-caption">Writing the contents of `/etc/passwd` to `stdout`</figcaption>
+
+### Exit
+
+The last routine terminates the execution of the shellcode, exiting gracefully.
+
+```nasm
+Exit:
 
     ; call sys_exit
     push rdi
     pop rax
     add al, 59
-    syscall</code></pre><figcaption>Graceful exit</figcaption></figure><p>If you wanted to make the shellcode even smaller, you could remove this part, since it's not really necessary.</p>
+    syscall
+```
+
+<figcaption class="figure-caption">Graceful exit</figcaption>
+
+If you wanted to make the shellcode even smaller, you could remove this part, since it's not really necessary.
+

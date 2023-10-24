@@ -2,6 +2,7 @@ Title: SLAE32 - Assignment 1
 Date: 2022-06-03T18:10:26.000Z
 ImageURL: https://images.unsplash.com/photo-1528999981900-4a4b66b29540?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&dl=fabrizio-conti-nqCoYoPG4R0-unsplash.jpg
 
+
 ## Disclaimer
 
 This blog post has been created for completing the requirements of the *SecurityTube Linux Assembly Expert Certification*:
@@ -124,7 +125,6 @@ The first function we need to convert into Assembly is `socket`. Unfortunately, 
 
 > `int socketcall(int call, unsigned long *args);`
 > `socketcall()` is a common kernel entry point for the socket system calls. *call* determines which socket function to invoke. `args` points to a block containing the actual arguments, which are passed through to the appropriate call.
-
 
 Based on this description and the function prototype, it seems we first need to find the right `call` value that references `socket()`. Although man pages don't list all the possible values for this argument (please contact me if you find them inside the man pages), we can take a look at the source code of the Linux kernel.
 To be more specific, [this page](https://github.com/torvalds/linux/blob/master/net/socket.c#L2901) contains the implementation of the `socketcall` function, listing several possible value for the argument `call`:

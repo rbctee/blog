@@ -13,7 +13,6 @@
  * https://github.com/poole/hyde.
  */
 
-
 /*
  * Contents
  *
@@ -23,7 +22,6 @@
  * Reverse layout
  * Themes
  */
-
 
 /*
  * Global resets
@@ -44,7 +42,6 @@ html {
     font-size: 20px;
   }
 }
-
 
 /*
  * Sidebar
@@ -150,7 +147,6 @@ a.sidebar-social-item.active:focus {
   }
 }
 
-
 /* Container
  *
  * Align the contents of the site above the proper threshold with some margin-fu
@@ -177,7 +173,6 @@ a.sidebar-social-item.active:focus {
   }
 }
 
-
 /*
  * Reverse layout
  *
@@ -201,8 +196,6 @@ a.sidebar-social-item.active:focus {
     margin-right: 22rem;
   }
 }
-
-
 
 /*
  * Themes

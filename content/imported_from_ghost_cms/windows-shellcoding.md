@@ -69,7 +69,7 @@ global _main
  
 section .text
 	; ...
-    call  _MessageBoxA@16
+    call _MessageBoxA@16
 ```
 
 When you import external references, you need to pass the correct library (usually `.lib`) to `link.exe`.
@@ -150,7 +150,6 @@ _start:
 ```
 
 To compile the program I added the library `advapi32.lib` to the `link` command, otherwise it won't know where the function `InitiateSystemShutdownA` resides.
-
 
 ```ps1
 nasm -f win64 -o test.o test.nasm

