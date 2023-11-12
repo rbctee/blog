@@ -57,7 +57,6 @@ grep -RiE '\(const char\s*?\*"\s[a-zA-Z]*\s*\)'
 # chdir.2:.BI "int chdir(const char *" path );
 # swapon.2:.BI "int swapoff(const char *" path );
 # uselib.2:.BI "int uselib(const char *" library );
-
 ```
 
 <figcaption class="figure-caption">Findings syscalls accepting one pointer argument</figcaption>
@@ -222,7 +221,6 @@ void main(int argc, char* argv[])
     int (*ret)() = (int(*)())egghunter;
     ret();
 }
-
 ```
 
 <figcaption class="figure-caption">Program for testing the egghunter</figcaption>

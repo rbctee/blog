@@ -1,6 +1,6 @@
 AUTHOR = 'rbct'
 SITENAME = 'Blog'
-SITEURL = ''
+SITEURL = 'http://127.0.0.1:8000'
 PATH = 'content'
 TIMEZONE = 'Europe/Rome'
 DEFAULT_LANG = 'en'

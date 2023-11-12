@@ -281,7 +281,6 @@ SpawnSystemShell:
 
     ; invoke execve
     syscall
-
 ```
 
 The following proof of concept demonstrates the successful creation of a password-protected reverse shell:

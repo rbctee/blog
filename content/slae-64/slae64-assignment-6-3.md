@@ -342,7 +342,6 @@ WriteTempFile:
 
     ; invoke syscall write
     syscall
-
 ```
 
 <figcaption class="figure-caption">Copying `/etc/passwd` to the temporary file</figcaption>

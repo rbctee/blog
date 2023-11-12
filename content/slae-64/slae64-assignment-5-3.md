@@ -77,7 +77,6 @@ gdb -q ./shellcode
 #    0x400080:    pop    rsi
 #    0x400081:    xor    edx,edx
 #    0x400083:    syscall
-
 ```
 
 ## Socket Creation
@@ -102,7 +101,6 @@ xor    edx,edx
 
 ; invoke sys_socket
 syscall
-
 ```
 
 You could also convert these instructions in the following C code:
@@ -113,7 +111,6 @@ int socket(
   1,            // SOCK_STREAM
   0,            // IP protocol
 );
-
 ```
 
 <figcaption class="figure-caption">C code for creating a TCP socket</figcaption>

