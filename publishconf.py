@@ -11,7 +11,6 @@ SITEURL = 'https://blog.rbct.it'
 RELATIVE_URLS = False
 
 DELETE_OUTPUT_DIRECTORY = True
-THEME = 'pelican-hyde'
 
 # Social widget
 SOCIAL = (
