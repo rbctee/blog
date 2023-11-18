@@ -28,11 +28,10 @@ jobs:
         uses: actions/configure-pages@v3
       - name: Install requirements
         run: pip install pelican
+      - name: Show contents
+        run: ls -laR
       - name: Build Pelican site
-        run: |
-          pelican content \
-            --settings "${{ inputs.settings }}" \
-            --extra-settings SITEURL='"${{ steps.pages.outputs.base_url }}"'
+        run: pelican content
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
