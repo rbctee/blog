@@ -31,7 +31,7 @@ jobs:
       - name: Show contents
         run: ls -la
       - name: Build Pelican site
-        run: pelican -v
+        run: pelican content -v -o output -s pelicanconf.py
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
