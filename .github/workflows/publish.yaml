@@ -27,11 +27,9 @@ jobs:
         id: pages
         uses: actions/configure-pages@v3
       - name: Install requirements
-        run: pip install pelican
-      - name: Show contents
-        run: ls -la
+        run: pip install -r requirements.txt
       - name: Build Pelican site
-        run: pelican content -v -o output -s pelicanconf.py
+        run: make publish
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
