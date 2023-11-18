@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.curdir)
 
 # If your site is available via HTTPS, make sure SITEURL begins with https://
-SITEURL = 'http://rbct.it'
+SITEURL = 'https://blog.rbct.it'
 RELATIVE_URLS = False
 
 DELETE_OUTPUT_DIRECTORY = True
