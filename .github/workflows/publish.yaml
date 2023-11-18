@@ -31,7 +31,7 @@ jobs:
       - name: Show contents
         run: ls -laR
       - name: Build Pelican site
-        run: pelican content
+        run: make publish
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
