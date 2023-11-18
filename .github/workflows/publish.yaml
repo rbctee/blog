@@ -30,14 +30,13 @@ jobs:
         run: pip install pelican
       - name: Build Pelican site
         run: |
-          pelican \
+          pelican content \
             --settings "${{ inputs.settings }}" \
-            --extra-settings SITEURL='"${{ steps.pages.outputs.base_url }}"' \
-            --output "${{ inputs.output-path }}"
+            --extra-settings SITEURL='"${{ steps.pages.outputs.base_url }}"'
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          path: ${{ inputs.output-path }}
+          path: output
   deploy:
     environment:
       name: github-pages
